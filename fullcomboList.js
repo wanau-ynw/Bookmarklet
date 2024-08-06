@@ -64,13 +64,22 @@ async function whatever(url) {
 }
 
 // 対象の全ページに対し、データの取得を行う
-// TODO: 引数で取得対象のLvを選択する
-async function wapper() {
-  const promises = [
-    // レベルごとのページリスト。曲が増えてページ数が増えた場合に書き換えが必要
-    // TODO: 最大ページ番号の自動取得
-    [0, 46], [1, 46], [2, 46], [3, 46], [4, 46], [5, 46], [6, 46], [7, 46], [8, 46], [9, 46], [10, 46], [11, 46], [12, 46], 
-  ].map(([page, level]) =>
+async function wapper(lv) {
+  // レベルごとのページリスト。曲が増えてページ数が増えた場合に書き換えが必要
+  // TODO: 最大ページ番号の自動取得
+  let pagelist
+  if (lv == 47){
+    pagelist = [
+      [0, 47], [1, 47], [2, 47], [3, 47], [4, 47], [5, 47], [6, 47], [7, 47], [8, 47], [9, 47], [10, 47],
+    ]
+  } else {
+    // 旧互換のため、そのほかの指定はすべてLv46扱いで動かす。
+    pagelist = [
+      [0, 46], [1, 46], [2, 46], [3, 46], [4, 46], [5, 46], [6, 46], [7, 46], [8, 46], [9, 46], [10, 46], [11, 46], [12, 46], 
+    ]
+  }
+
+  const promises = pagelist.map(([page, level]) =>
     whatever(`${PLAY_DATA_URL}?page=${page}&level=${level}`)
   );
 
@@ -145,12 +154,20 @@ async function addFullListImg(data, icon, target, x, y, dx, dy, iconsize) {
 
 // 公開用関数。一応Lvを引数に取るようにしているが、使ってない
 export default async (lv) => {
-  let data = await wapper();
+  let data = await wapper(lv);
   let icon = await loadMedals()
 
   // もとのドキュメントを消し去って、ページを構築
   document.body.innerHTML = "";
-  await addFullListImg(data, icon, "46_1", 277, 94, 276, 87, 73)
-  await addFullListImg(data, icon, "46_2", 277, 94, 276, 87, 73)
+  if (lv == 46) {
+    await addFullListImg(data, icon, "46_1", 277, 94, 276, 87, 73)
+    await addFullListImg(data, icon, "46_2", 277, 94, 276, 87, 73)
+  }
+  else if (lv == 47) {
+    await addFullListImg(data, icon, "47_1", 277, 94, 276, 87, 73)
+    await addFullListImg(data, icon, "47_2", 277, 94, 276, 87, 73)
+  } else {
+    document.body.innerHTML = "ブックマークに登録するURLが間違っていないか確認してください";
+  }
   // TODO: 画像ダウンロードボタン
 };
