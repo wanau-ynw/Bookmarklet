@@ -1,6 +1,7 @@
 const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/unilab/playdata/mu_lv.html"
 const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/unilab/images/p/common/medal";
 const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
+const ERROR_MEDAL_ID = 0
 
 // 取得したHTMLの文字コードを整える
 function resToText(res) {
@@ -27,7 +28,7 @@ function medalurlToInt(murl) {
     "i": 2,
     "j": 1,
     "k": 4,
-    "none": 0,
+    "none": ERROR_MEDAL_ID,
   };
   let alp = murl.replace(`${MEDAL_IMAGE_URL}/meda_`, "").replace(".png", "")
   return MEDAL_ID[alp]
@@ -101,6 +102,9 @@ function loadMedals(){
 function drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize) {
   console.log("draw icons")
   for (let d of data) {
+    if (d["medal"] == ERROR_MEDAL_ID){
+      continue;
+    }
     // 表データ内から曲を探す。もっといい方法がありそうだけど、せいぜい数百件のデータなので性能問題は無いでしょう
     for (let i = 0; i < mlist.length; i++) {
       for (let j = 0; j < mlist[i].length; j++) {
