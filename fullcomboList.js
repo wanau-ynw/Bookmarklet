@@ -178,12 +178,12 @@ export default async (lv, mode=1) => {
     await addFullListImg(data, icon, "c49", 151, 215, 334, 92, 38)
   }
   else if (lv == 46 && mode == M_FULLCOMBO) {
-    await addFullListImg(data, icon, "46_1", 277, 94, 276, 87, 73)
     await addFullListImg(data, icon, "46_2", 277, 94, 276, 87, 73)
+    await addFullListImg(data, icon, "46_1", 277, 94, 276, 87, 73)
   }
   else if (lv == 47 && mode == M_FULLCOMBO) {
-    await addFullListImg(data, icon, "47_1", 277, 94, 276, 87, 73)
     await addFullListImg(data, icon, "47_2", 277, 94, 276, 87, 73)
+    await addFullListImg(data, icon, "47_1", 277, 94, 276, 87, 73)
   } else {
     document.body.innerHTML = "ブックマークに登録するURLが間違っていないか確認してください";
   }
