@@ -150,7 +150,7 @@ function drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize) {
 // 元画像に対するメダルアイコンの描画基準位置(左上座標を指定)と、バナーの間隔を指定
 async function addFullListImg(data, icon, target, x, y, dx, dy, iconsize) {
   // 難易度表データ読み込み (タブ区切り UTF-8)
-  let mlist = await loadCSVData(GITHUB_URL + "/list/" + target + ".tsv")
+  let mlist = await loadCSVData(GITHUB_URL + "/list/" + target + ".txt")
   // ベース画像を作成し、ユーザデータをもとにアイコンを張り付けていく
   var img = new Image();
   img.onload = function () {

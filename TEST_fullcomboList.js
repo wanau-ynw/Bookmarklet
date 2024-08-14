@@ -80,6 +80,12 @@ async function wapper(lv) {
   );
 
   const s = (await Promise.all(promises)).flat();
+
+  // Lv50 特別処理。ポパクロ通常版とUPPERの区別がつかないので、力技で書き換え。後から取得したほうがUPPER。
+  // TODO: おそらく、将来的に通常版とUPPERの間にページ区切りが入った場合にうまく動かなくなる。正式な対応が必要。
+  if (lv == 50){
+    // TODO: 実装
+  }
   return s
 }
 
@@ -137,7 +143,7 @@ function drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize) {
 // 元画像に対するメダルアイコンの描画基準位置(左上座標を指定)と、バナーの間隔を指定
 async function addFullListImg(data, icon, target, x, y, dx, dy, iconsize) {
   // 難易度表データ読み込み (タブ区切り UTF-8)
-  let mlist = await loadCSVData(GITHUB_URL + "/list/" + target + ".tsv")
+  let mlist = await loadCSVData(GITHUB_URL + "/list/" + target + ".txt")
   // ベース画像を作成し、ユーザデータをもとにアイコンを張り付けていく
   var img = new Image();
   img.onload = function () {
@@ -161,8 +167,9 @@ export default async (lv, mode=1) => {
 
   // もとのドキュメントを消し去って、ページを構築
   document.body.innerHTML = "";
-  if (lv == 49 && mode == M_CLEAR) {
-    await addFullListImg(data, icon, "c49", 151, 215, 334, 92, 38)
+  if (mode == M_CLEAR) {
+    const targetname = "c" + lv
+    await addFullListImg(data, icon, targetname, 151, 215, 334, 92, 38)
   }
   else if (lv == 46 && mode == M_FULLCOMBO) {
     await addFullListImg(data, icon, "46_2", 277, 94, 276, 87, 73)
