@@ -3,6 +3,10 @@ const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/unilab/images/
 const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
 const ERROR_MEDAL_ID = 0
 
+// 動作モード
+const M_FULLCOMBO = 1
+const M_CLEAR = 2
+
 // 取得したHTMLの文字コードを整える
 function resToText(res) {
   return res.arrayBuffer().then((buffer) => {
@@ -66,9 +70,14 @@ async function whatever(url) {
 // 対象の全ページに対し、データの取得を行う
 async function wapper(lv) {
   // レベルごとのページリスト。曲が増えてページ数が増えた場合に書き換えが必要
+  // TODO: リファクタリング。こんなふうに列挙しなくてもいいはず。
   // TODO: 最大ページ番号の自動取得
   let pagelist
-  if (lv == 47){
+  if (lv == 49){
+    pagelist = [
+      [0, 49], [1, 49], [2, 49], [3, 49], [4, 49], [5, 49],
+    ]
+  } else if (lv == 47){
     pagelist = [
       [0, 47], [1, 47], [2, 47], [3, 47], [4, 47], [5, 47], [6, 47], [7, 47], [8, 47], [9, 47], [10, 47],
     ]
@@ -95,10 +104,14 @@ async function loadCSVData(filepath) {
     .map(line => line.split('\t').map(x => x.trim()));
 }
 
-// 結果用メダル画像を読み込む
-function loadMedals(){
+// 結果用メダル画像を読み込む (動作モードによってメダル種類が変わる)
+function loadMedals(mode){
+  let iconbasename = "icon"
+  if (mode == M_CLEAR){
+    iconbasename = "c_icon"
+  }
   async function load(id){
-      let src = GITHUB_URL + "/icon/c_" + id + ".png";
+      let src = GITHUB_URL + "/" + iconbasename + "/c_" + id + ".png";
       const img = new Image()
       img.src = src
       await img.decode()
@@ -152,18 +165,23 @@ async function addFullListImg(data, icon, target, x, y, dx, dy, iconsize) {
   img.src = GITHUB_URL + "/img/" + target + ".png";
 }
 
-// 公開用関数。一応Lvを引数に取るようにしているが、使ってない
-export default async (lv) => {
+// 公開用関数
+// mode 1 = フルコン難易度 (デフォルト)
+// mode 2 = クリア難易度
+export default async (lv, mode=1) => {
   let data = await wapper(lv);
-  let icon = await loadMedals()
+  let icon = await loadMedals(mode)
 
   // もとのドキュメントを消し去って、ページを構築
   document.body.innerHTML = "";
-  if (lv == 46) {
+  if (lv == 49 && mode == M_CLEAR) {
+    await addFullListImg(data, icon, "c49", 151, 215, 334, 92, 38)
+  }
+  else if (lv == 46 && mode == M_FULLCOMBO) {
     await addFullListImg(data, icon, "46_1", 277, 94, 276, 87, 73)
     await addFullListImg(data, icon, "46_2", 277, 94, 276, 87, 73)
   }
-  else if (lv == 47) {
+  else if (lv == 47 && mode == M_FULLCOMBO) {
     await addFullListImg(data, icon, "47_1", 277, 94, 276, 87, 73)
     await addFullListImg(data, icon, "47_2", 277, 94, 276, 87, 73)
   } else {
