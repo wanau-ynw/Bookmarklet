@@ -51,6 +51,7 @@ async function whatever(url) {
 
   if (tables.length != 1) {
     console.log("table not found : " + url)
+    document.body.innerHTML += "<br>プレイデータ読み込み時にエラーが発生しました";
     return
   }
   let tableRows = tables[0].querySelectorAll("li")
@@ -187,7 +188,7 @@ async function main(lv, mode) {
     await addFullListImg(data, icon, "47_2", 277, 94, 276, 87, 73)
     await addFullListImg(data, icon, "47_1", 277, 94, 276, 87, 73)
   } else {
-    document.body.innerHTML = "動作エラーです。ブックマークに登録するURLが間違っていないか確認してください";
+    document.body.innerHTML += "動作エラーです。ブックマークに登録するURLが間違っていないか確認してください";
   }
 }
 
