@@ -148,7 +148,7 @@ function drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize) {
 
 // データと対象Lvをもとに画像を作成する
 // 元画像に対するメダルアイコンの描画基準位置(左上座標を指定)と、バナーの間隔を指定
-async function addFullListImg(data, icon, target, x, y, dx, dy, iconsize) {
+async function addFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize) {
   // 難易度表データ読み込み (タブ区切り UTF-8)
   // TODO: コードのキャッシュ対策のため、Lv46だけは拡張子tsvのファイルも残している。そのうち消す
   let mlist = await loadCSVData(GITHUB_URL + "/list/" + target + ".txt")
@@ -163,7 +163,7 @@ async function addFullListImg(data, icon, target, x, y, dx, dy, iconsize) {
     drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize)
     document.body.appendChild(c);
   };
-  img.src = GITHUB_URL + "/img/" + target + ".png";
+  img.src = GITHUB_URL + "/img/" + target + ext;
 
   // TODO: 画像ダウンロードボタン
 }
@@ -185,15 +185,15 @@ async function main(lv, mode) {
 
   if (mode == M_CLEAR) {
     const targetname = "c" + lv
-    await addFullListImg(data, icon, targetname, 151, 215, 334, 92, 38)
+    await addFullListImg(data, icon, targetname, ".jpg", 151, 215, 334, 92, 38)
   }
   else if (lv == 46 && mode == M_FULLCOMBO) {
-    await addFullListImg(data, icon, "46_2", 277, 94, 276, 87, 73)
-    await addFullListImg(data, icon, "46_1", 277, 94, 276, 87, 73)
+    await addFullListImg(data, icon, "46_2", ".png", 277, 94, 276, 87, 73)
+    await addFullListImg(data, icon, "46_1", ".png", 277, 94, 276, 87, 73)
   }
   else if (lv == 47 && mode == M_FULLCOMBO) {
-    await addFullListImg(data, icon, "47_2", 277, 94, 276, 87, 73)
-    await addFullListImg(data, icon, "47_1", 277, 94, 276, 87, 73)
+    await addFullListImg(data, icon, "47_2", ".png", 277, 94, 276, 87, 73)
+    await addFullListImg(data, icon, "47_1", ".png", 277, 94, 276, 87, 73)
   } else {
     document.body.innerHTML += "動作エラーです。ブックマークに登録するURLが間違っていないか確認してください";
   }
