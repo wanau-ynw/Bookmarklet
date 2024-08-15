@@ -176,6 +176,13 @@ async function main(lv, mode) {
 
   // もとのドキュメントを消し去って、ページを構築
   document.body.innerHTML = "";
+  // 一覧に戻るボタン
+  let b = document.createElement('button');
+  b.textContent = "一覧に戻る";
+  b.addEventListener('click', async () => { await allpage() });
+  document.body.appendChild(b);
+  document.body.appendChild(document.createElement('br'));
+
   if (mode == M_CLEAR) {
     const targetname = "c" + lv
     await addFullListImg(data, icon, targetname, 151, 215, 334, 92, 38)
