@@ -4,6 +4,7 @@ const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
 const ERROR_MEDAL_ID = 0
 
 // 動作モード
+const M_ALL = 0
 const M_FULLCOMBO = 1
 const M_CLEAR = 2
 
@@ -162,17 +163,18 @@ async function addFullListImg(data, icon, target, x, y, dx, dy, iconsize) {
     document.body.appendChild(c);
   };
   img.src = GITHUB_URL + "/img/" + target + ".png";
+
+  // TODO: 画像ダウンロードボタン
 }
 
-// 公開用関数
-// mode 1 = フルコン難易度 (デフォルト)
-// mode 2 = クリア難易度
-export default async (lv, mode=1) => {
+// メイン処理。レベルと動作モードを指定して一覧表を出力する
+async function main(lv, mode) {
+  document.body.innerHTML = "作成中・・・";
   let data = await wapper(lv);
   let icon = await loadMedals(mode)
 
   // もとのドキュメントを消し去って、ページを構築
-  document.body.innerHTML = "作成中・・・";
+  document.body.innerHTML = "";
   if (mode == M_CLEAR) {
     const targetname = "c" + lv
     await addFullListImg(data, icon, targetname, 151, 215, 334, 92, 38)
@@ -185,10 +187,48 @@ export default async (lv, mode=1) => {
     await addFullListImg(data, icon, "47_2", 277, 94, 276, 87, 73)
     await addFullListImg(data, icon, "47_1", 277, 94, 276, 87, 73)
   } else {
-    document.body.innerHTML = "ブックマークに登録するURLが間違っていないか確認してください";
+    document.body.innerHTML = "動作エラーです。ブックマークに登録するURLが間違っていないか確認してください";
   }
-  // TODO: 画像ダウンロードボタン
-  // TODO: ワンクッションページをおいて、そこから表示する一覧表を選択するようにしてもいいかも
-  //        ブックマーク用のURLをクリップボードに貼る機能？READMEへのリンクでいいか。
+}
+
+// 現在表示できるリストの一覧を表示して選択してもらうためのページ部品。
+// 動作モードやタイトルを指定することで、フルコン用とクリア用の処理を共通化
+async function allpage_sub(mode, title, minlv, maxlv) {
+  let t = document.createElement('h2');
+  t.textContent = title;
+  document.body.appendChild(t);
+  // TODO: ブックマーク用のURLをクリップボードに貼る機能？READMEと重複するので別にいいか
+  for (let i = minlv; i <= maxlv; i++) {
+    let b = document.createElement('button');
+    b.textContent = "Lv" + i + " " + title;
+    b.addEventListener('click', async ()=> {await main(i, mode)});
+    document.body.appendChild(b);
+  }
+  document.body.appendChild(document.createElement('br'));
+}
+
+// 現在表示できるリストの一覧を表示して選択してもらうためのページ
+async function allpage() {
+  document.body.innerHTML = "";
+
+  // クリア難易度表
+  allpage_sub(M_CLEAR, "クリア難易度表", 47, 50)
+
+  document.body.appendChild(document.createElement('br'));
+
+  // フルコン難易度表
+  allpage_sub(M_FULLCOMBO, "フルコン難易度表", 46, 47)
+}
+
+// 公開用関数
+// mode 0 = 機能一覧表示
+// mode 1 = フルコン難易度 (デフォルト)
+// mode 2 = クリア難易度
+export default async (lv, mode=1) => {
+  if (mode == M_ALL){
+    allpage();
+  }else{
+    main(lv, mode);
+  }
   // TODO: README修正。
 };
