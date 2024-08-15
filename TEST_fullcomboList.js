@@ -81,10 +81,15 @@ async function wapper(lv) {
 
   const s = (await Promise.all(promises)).flat();
 
-  // Lv50 特別処理。ポパクロ通常版とUPPERの区別がつかないので、力技で書き換え。後から取得したほうがUPPER。
+  // Lv50 特別処理。ポパクロ通常版とUPPERの区別がつかないので、力技で書き換え。先に取得したほうが通常版。
   // TODO: おそらく、将来的に通常版とUPPERの間にページ区切りが入った場合にうまく動かなくなる。正式な対応が必要。
   if (lv == 50){
-    // TODO: 実装
+    for (let i = 0; i < s.length; i++) {
+      if(s[i]["song"] == "Popperz Chronicle"){
+        s[i]["song"] = "Popperz Chronicle A"
+        break
+      }
+    }
   }
   return s
 }
@@ -97,7 +102,7 @@ async function loadCSVData(filepath) {
     .map(line => line.split('\t').map(x => x.trim()));
 }
 
-// 結果用メダル画像を読み込む (動作モードによってメダル種類が変わる)
+// 結果用メダル画像を読み込む (動作モードによってメダル画像の種類を変えている)
 function loadMedals(mode){
   let iconbasename = "icon"
   if (mode == M_CLEAR){
@@ -167,7 +172,7 @@ export default async (lv, mode=1) => {
   let icon = await loadMedals(mode)
 
   // もとのドキュメントを消し去って、ページを構築
-  document.body.innerHTML = "";
+  document.body.innerHTML = "作成中・・・";
   if (mode == M_CLEAR) {
     const targetname = "c" + lv
     await addFullListImg(data, icon, targetname, 151, 215, 334, 92, 38)
@@ -183,4 +188,7 @@ export default async (lv, mode=1) => {
     document.body.innerHTML = "ブックマークに登録するURLが間違っていないか確認してください";
   }
   // TODO: 画像ダウンロードボタン
+  // TODO: ワンクッションページをおいて、そこから表示する一覧表を選択するようにしてもいいかも
+  //        ブックマーク用のURLをクリップボードに貼る機能？READMEへのリンクでいいか。
+  // TODO: README修正。
 };
