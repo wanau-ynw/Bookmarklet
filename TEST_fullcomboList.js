@@ -146,6 +146,17 @@ function drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize) {
   }
 }
 
+async function loadCSS(href) {
+  return new Promise((resolve, reject) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.onload = () => resolve(href);
+    link.onerror = () => reject(new Error(`Failed to load CSS: ${href}`));
+    document.head.appendChild(link);
+  });
+}
+
 async function loadImage(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -208,22 +219,41 @@ async function main(lv, mode) {
 // 現在表示できるリストの一覧を表示して選択してもらうためのページ部品。
 // 動作モードやタイトルを指定することで、フルコン用とクリア用の処理を共通化
 async function allpage_sub(mode, title, minlv, maxlv) {
+  // タイトル
   let t = document.createElement('h2');
   t.textContent = title;
   document.body.appendChild(t);
+  // 全体を囲むdiv要素
+  let maindiv = document.createElement('div');
+  maindiv.className = "button-container";
   // TODO: ブックマーク用のURLをクリップボードに貼る機能？READMEと重複するので別にいいか
   for (let i = minlv; i <= maxlv; i++) {
+    // 各要素を囲むdiv
+    let subdiv = document.createElement('div');
+    // 機能ボタン
     let b = document.createElement('button');
-    b.textContent = "Lv" + i + " " + title;
+    b.textContent = "Lv" + i;
     b.addEventListener('click', async ()=> {await main(i, mode)});
-    document.body.appendChild(b);
+    // ボタン更新日 (仮)
+    let p = document.createElement('p');
+    p.textContent = "yyyy/mm/dd更新"
+    // 各要素を画面に追加
+    subdiv.appendChild(b);
+    subdiv.appendChild(p);
+    maindiv.appendChild(subdiv);
   }
+  document.body.appendChild(maindiv);
   document.body.appendChild(document.createElement('br'));
 }
 
 // 現在表示できるリストの一覧を表示して選択してもらうためのページ
 async function allpage() {
   document.body.innerHTML = "";
+  // タイトルロゴ
+  let logo = document.createElement('img');
+  logo.src = GITHUB_URL + "/img/popnlogo.png";
+  document.body.appendChild(logo);
+  document.body.appendChild(document.createElement('br'));
 
   // クリア難易度表
   allpage_sub(M_CLEAR, "クリア難易度表", 47, 50)
@@ -239,6 +269,10 @@ async function allpage() {
 // mode 1 = フルコン難易度 (デフォルト)
 // mode 2 = クリア難易度
 export default async (lv, mode=1) => {
+  // 初回アクセス時のみ、cssを取り込む
+  await loadCSS(GITHUB_URL + "/css/normalize.css");
+  await loadCSS(GITHUB_URL + "/css/style.css");
+
   if (mode == M_ALL){
     allpage();
   }else{
