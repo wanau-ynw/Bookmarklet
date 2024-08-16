@@ -271,6 +271,17 @@ async function allpage() {
 
   // フルコン難易度表
   allpage_sub(M_FULLCOMBO, "フルコン難易度表", 46, 47)
+
+  // フッター
+  let footer = document.createElement('footer');
+  let help = document.createElement('a');
+  help.innerText = "ヘルプ(README)";
+  help.href = GITHUB_URL;
+  let copyright = document.createElement('p');
+  copyright.innerText = "製作者: @PopnYnw / クリア難易度表: @kotatsu_popn / フルコン難易度表: @meumeuptt";
+  footer.appendChild(help);
+  footer.appendChild(copyright);
+  document.body.appendChild(footer);
 }
 
 // 公開用関数
@@ -279,6 +290,8 @@ async function allpage() {
 // mode 2 = クリア難易度
 export default async (lv, mode=1) => {
   // 初回アクセス時のみ、cssを取り込む
+  document.body.innerHTML = "";
+  document.head.innerHTML = "";
   await loadCSS(GITHUB_URL + "/css/normalize.css");
   await loadCSS(GITHUB_URL + "/css/style.css");
 

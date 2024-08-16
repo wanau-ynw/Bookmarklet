@@ -35,3 +35,14 @@ h2 {
     margin: 4px 0;
     color: #707070;
 }
+footer {
+    position: absolute;
+    bottom: 0;
+    padding: 1rem;
+    font-size: 60%;
+    color: #707070;
+    border-top: 1px solid #909090;
+}
+footer a:hover {
+    color: #000;
+}
