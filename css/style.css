@@ -15,14 +15,15 @@ h2 {
 .button-container button {
     display: block;
     text-align: center;
+    min-width: 8rem;
     margin: 0 1rem;
-    padding: 0.6rem 2.5rem;
+    padding: 0.6rem;
     font-size: 90%;
     font-weight: bold;
-    border: 4px solid #01aae1;
+    border: 3px solid #01aae1;
     color: #01aae1;
     background: #e9f9fe;
-    border-radius: 100vh;
+    border-radius: 2rem;
 }
 .button-container button:hover {
     color: #fff;
