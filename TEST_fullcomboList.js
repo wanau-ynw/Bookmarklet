@@ -168,7 +168,7 @@ async function loadImage(src) {
 
 // データと対象Lvをもとに画像を作成する
 // 元画像に対するメダルアイコンの描画基準位置(左上座標を指定)と、バナーの間隔を指定
-async function addFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize) {
+async function createFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize) {
   // 難易度表データ読み込み (タブ区切り UTF-8)
   // TODO: コードのキャッシュ対策のため、Lv46だけは拡張子tsvのファイルも残している。そのうち消す
   let mlist = await loadCSVData(GITHUB_URL + "/list/" + target + ".txt")
@@ -180,40 +180,49 @@ async function addFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize) {
   let ctx = c.getContext('2d');
   ctx.drawImage(img, 0, 0);
   drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize);
-  document.body.appendChild(c);
+  return c;
 
   // TODO: 画像ダウンロードボタン
 }
 
 // メイン処理。レベルと動作モードを指定して一覧表を出力する
 async function main(lv, mode) {
-  document.body.innerHTML = "作成中・・・";
+  document.body.innerHTML = "作成中・・・ (0/3)";
   let data = await wapper(lv);
+  document.body.innerHTML = "作成中・・・ (1/3)";
   let icon = await loadMedals(mode)
+  document.body.innerHTML = "作成中・・・ (2/3)";
 
-  // もとのドキュメントを消し去って、ページを構築
-  document.body.innerHTML = "";
   // 一覧に戻るボタン
   let b = document.createElement('button');
   b.textContent = "一覧に戻る";
   b.addEventListener('click', async () => { await allpage() });
-  document.body.appendChild(b);
-  document.body.appendChild(document.createElement('br'));
 
+  // 一覧表作成
+  let c1 = null;
+  let c2 = null;
   if (mode == M_CLEAR) {
     const targetname = "c" + lv
-    await addFullListImg(data, icon, targetname, ".jpg", 151, 215, 334, 92, 38)
+    c1 = await createFullListImg(data, icon, targetname, ".jpg", 151, 215, 334, 92, 38)
   }
   else if (lv == 46 && mode == M_FULLCOMBO) {
-    await addFullListImg(data, icon, "46_2", ".png", 277, 94, 276, 87, 73)
-    await addFullListImg(data, icon, "46_1", ".png", 277, 94, 276, 87, 73)
+    c1 = await createFullListImg(data, icon, "46_2", ".png", 277, 94, 276, 87, 73)
+    c2 = await createFullListImg(data, icon, "46_1", ".png", 277, 94, 276, 87, 73)
   }
   else if (lv == 47 && mode == M_FULLCOMBO) {
-    await addFullListImg(data, icon, "47_2", ".png", 277, 94, 276, 87, 73)
-    await addFullListImg(data, icon, "47_1", ".png", 277, 94, 276, 87, 73)
+    c1 = await createFullListImg(data, icon, "47_2", ".png", 277, 94, 276, 87, 73)
+    c2 = await createFullListImg(data, icon, "47_1", ".png", 277, 94, 276, 87, 73)
   } else {
-    document.body.innerHTML += "動作エラーです。ブックマークに登録するURLが間違っていないか確認してください";
+    document.body.innerHTML += "・・・動作エラーです。ブックマークに登録するURLが間違っていないか確認してください";
+    return;
   }
+
+  // もとのドキュメントを消し去って、ページを構築
+  document.body.innerHTML = "";
+  document.body.appendChild(b);
+  document.body.appendChild(document.createElement('br'));
+  if(c1)document.body.appendChild(c1);
+  if(c2)document.body.appendChild(c2);
 }
 
 // 現在表示できるリストの一覧を表示して選択してもらうためのページ部品。
@@ -235,11 +244,11 @@ async function allpage_sub(mode, title, minlv, maxlv) {
     b.textContent = "Lv" + i;
     b.addEventListener('click', async ()=> {await main(i, mode)});
     // ボタン更新日 (仮)
-    let p = document.createElement('p');
-    p.textContent = "yyyy/mm/dd更新"
+    // let p = document.createElement('p');
+    // p.textContent = "yyyy/mm/dd更新"
     // 各要素を画面に追加
     subdiv.appendChild(b);
-    subdiv.appendChild(p);
+    // subdiv.appendChild(p);
     maindiv.appendChild(subdiv);
   }
   document.body.appendChild(maindiv);
