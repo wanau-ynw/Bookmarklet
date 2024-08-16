@@ -146,6 +146,15 @@ function drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize) {
   }
 }
 
+async function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
 // データと対象Lvをもとに画像を作成する
 // 元画像に対するメダルアイコンの描画基準位置(左上座標を指定)と、バナーの間隔を指定
 async function addFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize) {
@@ -153,17 +162,14 @@ async function addFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize) {
   // TODO: コードのキャッシュ対策のため、Lv46だけは拡張子tsvのファイルも残している。そのうち消す
   let mlist = await loadCSVData(GITHUB_URL + "/list/" + target + ".txt")
   // ベース画像を作成し、ユーザデータをもとにアイコンを張り付けていく
-  var img = new Image();
-  img.onload = function () {
-    let c = document.createElement('canvas');
-    c.width = img.width;
-    c.height = img.height;
-    let ctx = c.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize)
-    document.body.appendChild(c);
-  };
-  img.src = GITHUB_URL + "/img/" + target + ext;
+  const img = await loadImage(GITHUB_URL + "/img/" + target + ext);
+  let c = document.createElement('canvas');
+  c.width = img.width;
+  c.height = img.height;
+  let ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize);
+  document.body.appendChild(c);
 
   // TODO: 画像ダウンロードボタン
 }
