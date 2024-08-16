@@ -137,7 +137,7 @@ function drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize) {
         // とりあえず、Lv46 スクリーンHyに後置空白が入っていることが分かったので、比較前にトリムだけはかけておく
         if (mlist[i][j] === d["song"].trim()) {
           // 見つかった場所に描画する。アイコンサイズは貼り付け先画像のサイズに合わせて変える
-          console.log("hit : " + (j+1) + ":" + (i+1) + " : " + "medal " + d["medal"]  + ":" + d["song"])
+          // console.log("hit : " + (j+1) + ":" + (i+1) + " : " + "medal " + d["medal"]  + ":" + d["song"])
           ctx.drawImage(icon[d["medal"] - 1], x + dx * j, y + dy * i, iconsize, iconsize)
           break;
         };
@@ -170,7 +170,6 @@ async function loadImage(src) {
 // 元画像に対するメダルアイコンの描画基準位置(左上座標を指定)と、バナーの間隔を指定
 async function createFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize) {
   // 難易度表データ読み込み (タブ区切り UTF-8)
-  // TODO: コードのキャッシュ対策のため、Lv46だけは拡張子tsvのファイルも残している。そのうち消す
   let mlist = await loadCSVData(GITHUB_URL + "/list/" + target + ".txt")
   // ベース画像を作成し、ユーザデータをもとにアイコンを張り付けていく
   const img = await loadImage(GITHUB_URL + "/img/" + target + ext);

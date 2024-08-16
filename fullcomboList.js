@@ -137,7 +137,7 @@ function drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize) {
         // とりあえず、Lv46 スクリーンHyに後置空白が入っていることが分かったので、比較前にトリムだけはかけておく
         if (mlist[i][j] === d["song"].trim()) {
           // 見つかった場所に描画する。アイコンサイズは貼り付け先画像のサイズに合わせて変える
-          console.log("hit : " + (j+1) + ":" + (i+1) + " : " + "medal " + d["medal"]  + ":" + d["song"])
+          // console.log("hit : " + (j+1) + ":" + (i+1) + " : " + "medal " + d["medal"]  + ":" + d["song"])
           ctx.drawImage(icon[d["medal"] - 1], x + dx * j, y + dy * i, iconsize, iconsize)
           break;
         };
