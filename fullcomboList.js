@@ -39,6 +39,26 @@ function medalurlToInt(murl) {
   return MEDAL_ID[alp]
 }
 
+// 画面上に文字を表示する
+async function showMessage(txt, clean = false, error = false) {
+  if (clean) {
+    cleanupHTML();
+  }
+  if (error){
+    document.body.innerHTML += '<div class="errormsg">';
+  }
+  document.body.innerHTML += txt;
+  if (error){
+    document.body.innerHTML += '</div">';
+  }
+  document.body.innerHTML += "<br>";
+}
+
+// 画面を消去する
+async function cleanupHTML() {
+  document.body.innerHTML = "";
+}
+
 // URLを読み込み、そのページ内の全データを返す
 async function whatever(url) {
   console.log("load url : " + url)
@@ -51,7 +71,7 @@ async function whatever(url) {
 
   if (tables.length != 1) {
     console.log("table not found : " + url)
-    document.body.innerHTML += "<br>プレイデータ読み込み時にエラーが発生しました";
+    showMessage("プレイデータ読み込み時にエラーが発生しました", false, true);
     return
   }
   let tableRows = tables[0].querySelectorAll("li")
@@ -186,11 +206,11 @@ async function createFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize
 
 // メイン処理。レベルと動作モードを指定して一覧表を出力する
 async function main(lv, mode) {
-  document.body.innerHTML = "作成中・・・ (0/3)";
+  showMessage("作成中・・・ (0/3)", true);
   let data = await wapper(lv);
-  document.body.innerHTML = "作成中・・・ (1/3)";
+  showMessage("作成中・・・ (1/3)", true);
   let icon = await loadMedals(mode)
-  document.body.innerHTML = "作成中・・・ (2/3)";
+  showMessage("作成中・・・ (2/3)", true);
 
   // 一覧に戻るボタン
   let b = document.createElement('button');
@@ -212,12 +232,12 @@ async function main(lv, mode) {
     c1 = await createFullListImg(data, icon, "47_2", ".png", 277, 94, 276, 87, 73)
     c2 = await createFullListImg(data, icon, "47_1", ".png", 277, 94, 276, 87, 73)
   } else {
-    document.body.innerHTML += "・・・動作エラーです。ブックマークに登録するURLが間違っていないか確認してください";
+    showMessage("・・・動作エラーです。ブックマークに登録するURLが間違っていないか確認してください", false, true);
     return;
   }
 
   // もとのドキュメントを消し去って、ページを構築
-  document.body.innerHTML = "";
+  cleanupHTML();
   document.body.appendChild(b);
   document.body.appendChild(document.createElement('br'));
   if(c1)document.body.appendChild(c1);
@@ -256,7 +276,7 @@ async function allpage_sub(mode, title, minlv, maxlv) {
 
 // 現在表示できるリストの一覧を表示して選択してもらうためのページ
 async function allpage() {
-  document.body.innerHTML = "";
+  cleanupHTML();
   // タイトルロゴ
   let logo = document.createElement('img');
   logo.src = GITHUB_URL + "/img/popnlogo.png";
@@ -289,7 +309,7 @@ async function allpage() {
 // mode 2 = クリア難易度
 export default async (lv, mode=1) => {
   // 初回アクセス時のみ、cssを取り込む
-  document.body.innerHTML = "";
+  cleanupHTML();
   document.head.innerHTML = "";
   await loadCSS(GITHUB_URL + "/css/normalize.css");
   await loadCSS(GITHUB_URL + "/css/style.css");
