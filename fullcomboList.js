@@ -299,5 +299,4 @@ export default async (lv, mode=1) => {
   }else{
     main(lv, mode);
   }
-  // TODO: README修正。
 };
