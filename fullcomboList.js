@@ -190,7 +190,9 @@ async function loadImage(src) {
 // 元画像に対するメダルアイコンの描画基準位置(左上座標を指定)と、バナーの間隔を指定
 async function createFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize) {
   // 難易度表データ読み込み (タブ区切り UTF-8)
+  showMessage("難易度表読み込み中・・・", true);
   let mlist = await loadCSVData(GITHUB_URL + "/list/" + target + ".txt")
+  showMessage("画像作成中・・・", true);
   // ベース画像を作成し、ユーザデータをもとにアイコンを張り付けていく
   const img = await loadImage(GITHUB_URL + "/img/" + target + ext);
   let c = document.createElement('canvas');
@@ -206,11 +208,11 @@ async function createFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize
 
 // メイン処理。レベルと動作モードを指定して一覧表を出力する
 async function main(lv, mode) {
-  showMessage("作成中・・・ (0/3)", true);
+  showMessage("プレイデータの読み込み中・・・", true);
   let data = await wapper(lv);
-  showMessage("作成中・・・ (1/3)", true);
+  showMessage("画像素材の読み込み中・・・", true);
   let icon = await loadMedals(mode)
-  showMessage("作成中・・・ (2/3)", true);
+  showMessage("画像作成処理開始", true);
 
   // 一覧に戻るボタン
   let b = document.createElement('button');
