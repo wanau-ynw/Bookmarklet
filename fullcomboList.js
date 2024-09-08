@@ -212,6 +212,12 @@ async function createFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize
 async function main(lv, mode) {
   showMessage("プレイデータの読み込み中・・・", true);
   let data = await wapper(lv);
+  if (!data || data.length == 0 || !data[0]) {
+    showMessage(
+      "プレイデータの読み取りに失敗しました。<br>" + 
+      "公式サイトにアクセスして、データが参照できるか確認してください。", false, true);
+    return;
+  }
   showMessage("画像素材の読み込み中・・・", true);
   let icon = await loadMedals(mode)
   showMessage("画像作成処理開始", true);
