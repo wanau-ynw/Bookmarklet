@@ -9,6 +9,9 @@ h2 {
     color: #333333;
     margin: 0.5rem 1rem;
 }
+.errormsg {
+    color: red;
+}
 .button-container {
     display: flex;
 }
