@@ -44,14 +44,16 @@ async function showMessage(txt, clean = false, error = false) {
   if (clean) {
     cleanupHTML();
   }
+  let html = "";
   if (error){
-    document.body.innerHTML += '<div class="errormsg">';
+    html += '<div class="errormsg">';
   }
-  document.body.innerHTML += txt;
+  html += txt;
   if (error){
-    document.body.innerHTML += '</div">';
+    html += '</div">';
   }
-  document.body.innerHTML += "<br>";
+  html += "<br>";
+  document.body.innerHTML += html;
 }
 
 // 画面を消去する
@@ -234,7 +236,7 @@ async function main(lv, mode) {
     c1 = await createFullListImg(data, icon, "47_2", ".png", 277, 94, 276, 87, 73)
     c2 = await createFullListImg(data, icon, "47_1", ".png", 277, 94, 276, 87, 73)
   } else {
-    showMessage("・・・動作エラーです。ブックマークに登録するURLが間違っていないか確認してください", false, true);
+    showMessage("動作エラーです。ブックマークに登録するURLが間違っていないか確認してください", false, true);
     return;
   }
 
