@@ -61,6 +61,28 @@ async function cleanupHTML() {
   document.body.innerHTML = "";
 }
 
+// 特定のLv曲一覧が、何ページあるか調べる
+async function getMaxLvPageNum(lv) {
+  let url = `${PLAY_DATA_URL}?page=0&level=${lv}`
+  let htmltxt = await fetch(url).then(resToText);
+  // ページ末尾にある改ページ用のURLを抽出し、最大ページ番号を求める
+  const pattern = /mu_lv.html\?page=(\d+)/g;
+  let match;
+  let maxNumber = -Infinity;
+  while ((match = pattern.exec(htmltxt)) !== null) {
+    const number = parseInt(match[1], 10);
+    if (number > maxNumber) {
+      maxNumber = number;
+    }
+  }
+  if (maxNumber === -Infinity) {
+    showMessage("曲一覧ページの最大数取得時にエラーが発生しました", false, true);
+    return 0;
+  }
+  // リンクのページ番号は0から始まっているので、ページ数はそれに+1する
+  return maxNumber + 1;
+}
+
 // URLを読み込み、そのページ内の全データを返す
 async function whatever(url) {
   console.log("load url : " + url)
@@ -93,10 +115,7 @@ async function whatever(url) {
 
 // 対象の全ページに対し、データの取得を行う
 async function wapper(lv) {
-  // Lv40~50の、レベルごとのページリスト。曲が増えてページ数が増えた場合に書き換えが必要
-  // TODO: 最大ページ番号の自動取得
-  const sizelist = [14, 14, 14, 12, 12, 14, 14, 11, 10, 6, 2];
-  const size = sizelist[lv-40];
+  const size = await getMaxLvPageNum(lv);
   let pagelist = Array.from({ length: size }, (_, i) => [i, lv]);
 
   const promises = pagelist.map(([page, level]) =>
