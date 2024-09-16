@@ -155,6 +155,7 @@ function loadMedals(mode){
       let src = GITHUB_URL + "/" + iconbasename + "/c_" + id + ".png";
       const img = new Image()
       img.src = src
+      img.crossOrigin = "anonymous"; // 画像ダウンロード用
       await img.decode()
       return img
   }
@@ -204,6 +205,7 @@ async function loadImage(src) {
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
+    img.crossOrigin = "anonymous"; // 画像ダウンロード用
   });
 }
 
@@ -223,8 +225,35 @@ async function createFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize
   ctx.drawImage(img, 0, 0);
   drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize);
   return c;
+}
 
-  // TODO: 画像ダウンロードボタン
+// 画像ダウンロード用のファイル名を作成する
+function makeImgName(lv, mode, id) {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  let modestr = (mode == M_FULLCOMBO ? "fullcombo" : "clear");
+  
+  return `${year}${month}${day}_${lv}_${modestr}${id}.png`;
+}
+
+// キャンバスの画像をダウンロードするボタンを追加する
+// 画像が複数あった時のために、id 引数で識別子を付ける。ただし、画像が1つの場合は空文字が渡される
+async function appendImgDLbtn(c, lv, mode, id) {
+  let filename = makeImgName(lv, mode, id);
+  const button = document.createElement('button');
+  button.textContent = 'Download' + id;
+  
+  button.addEventListener('click', () => {
+      const dataURL = c.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataURL;
+      link.download = filename;
+      link.click();
+  });
+  document.body.appendChild(button);
 }
 
 // メイン処理。レベルと動作モードを指定して一覧表を出力する
@@ -268,6 +297,8 @@ async function main(lv, mode) {
   // もとのドキュメントを消し去って、ページを構築
   cleanupHTML();
   document.body.appendChild(b);
+  if(c1)await appendImgDLbtn(c1, lv, mode, (c2?"-1":"")); // 画像が2つあるなら、区別するためのidを追加しておく
+  if(c2)await appendImgDLbtn(c2, lv, mode, "-2");
   document.body.appendChild(document.createElement('br'));
   if(c1)document.body.appendChild(c1);
   if(c2)document.body.appendChild(c2);
