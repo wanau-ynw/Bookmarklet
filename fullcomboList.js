@@ -247,11 +247,14 @@ async function appendImgDLbtn(c, lv, mode, id) {
   button.textContent = 'Download' + id;
   
   button.addEventListener('click', () => {
-      const dataURL = c.toDataURL('image/png');
+    c.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = dataURL;
+      link.href = url;
       link.download = filename;
       link.click();
+      URL.revokeObjectURL(url); // メモリリークを防ぐためにURLを解放する
+    });
   });
   document.body.appendChild(button);
 }
