@@ -252,7 +252,9 @@ async function appendImgDLbtn(c, lv, mode, id) {
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url); // メモリリークを防ぐためにURLを解放する
     });
   });
