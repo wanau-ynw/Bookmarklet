@@ -224,7 +224,12 @@ async function createFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize
   let ctx = c.getContext('2d');
   ctx.drawImage(img, 0, 0);
   drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize);
-  return c;
+
+  // canvasから画像を作成し、img要素を生成する
+  showMessage("画像の変換中・・・", true);
+  const imgElement = document.createElement('img');
+  imgElement.src = c.toDataURL('image/png');
+  return imgElement;
 }
 
 // 画像ダウンロード用のファイル名を作成する
@@ -241,22 +246,18 @@ function makeImgName(lv, mode, id) {
 
 // キャンバスの画像をダウンロードするボタンを追加する
 // 画像が複数あった時のために、id 引数で識別子を付ける。ただし、画像が1つの場合は空文字が渡される
-async function appendImgDLbtn(c, lv, mode, id) {
+async function appendImgDLbtn(img, lv, mode, id) {
   let filename = makeImgName(lv, mode, id);
   const button = document.createElement('button');
   button.textContent = 'Download' + id;
   
   button.addEventListener('click', () => {
-    c.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url); // メモリリークを防ぐためにURLを解放する
-    });
+    const link = document.createElement('a');
+    link.href = img.src;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   });
   document.body.appendChild(button);
 }
