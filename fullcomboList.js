@@ -286,7 +286,7 @@ async function main(lv, mode) {
   let c2 = null;
   if (mode == M_CLEAR) {
     const targetname = "c" + lv
-    c1 = await createFullListImg(data, icon, targetname, ".jpg", 151, 215, 334, 92, 38)
+    c1 = await createFullListImg(data, icon, targetname, ".jpg", 149, 213, 334, 92, 42)
   }
   else if (lv == 46 && mode == M_FULLCOMBO) {
     c1 = await createFullListImg(data, icon, "46_2", ".png", 277, 94, 276, 87, 73)
