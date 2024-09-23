@@ -1,6 +1,7 @@
 const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/unilab/playdata/mu_lv.html"
 const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/unilab/images/p/common/medal";
-const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
+// const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
+const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
 const ERROR_MEDAL_ID = 0
 
 // 動作モード
@@ -37,6 +38,22 @@ function medalurlToInt(murl) {
   };
   let alp = murl.replace(`${MEDAL_IMAGE_URL}/meda_`, "").replace(".png", "")
   return MEDAL_ID[alp]
+}
+
+// スコアをもとにクリアランクメダルの画像番号を返す。(未クリアでもAA以上を返す)
+// メダル番号が判別できない場合、nullを返す
+function scoreToRank(score) {
+  if(score){
+    if(score >= 98000)return 8;
+    if(score >= 95000)return 7;
+    if(score >= 90000)return 6;
+    if(score >= 82000)return 5;
+    if(score >= 72000)return 4;
+    if(score >= 62000)return 3;
+    if(score >= 50000)return 2;
+    if(score >= 1)return 1;
+  }
+  return null;
 }
 
 // 画面上に文字を表示する
@@ -163,7 +180,24 @@ function loadMedals(mode){
   return Promise.all(list.map(id => load(id)))
 }
 
-function drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize) {
+// クリアランク用メダル画像を読み込む
+function loadRankMedals(){
+  let iconbasename = "icon"
+  async function load(id){
+      let src = GITHUB_URL + "/" + iconbasename + "/s_" + id + ".png";
+      const img = new Image()
+      img.src = src
+      img.crossOrigin = "anonymous"; // 画像ダウンロード用
+      await img.decode()
+      return img
+  }
+  let list = [1, 2, 3, 4, 5, 6, 7, 8]
+  return Promise.all(list.map(id => load(id)))
+}
+
+// データをもとに、キャンバスにメダル画像を張り付けていく。
+// scoreicon が設定されている場合、クリアランクも表示する (引数の仕様がわかりにくいかも)
+function drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize) {
   console.log("draw icons")
   for (let d of data) {
     if (d["medal"] == ERROR_MEDAL_ID){
@@ -181,6 +215,13 @@ function drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize) {
           // 見つかった場所に描画する。アイコンサイズは貼り付け先画像のサイズに合わせて変える
           // console.log("hit : " + (j+1) + ":" + (i+1) + " : " + "medal " + d["medal"]  + ":" + d["song"])
           ctx.drawImage(icon[d["medal"] - 1], x + dx * j, y + dy * i, iconsize, iconsize)
+          // クリアランク表示
+          if (scoreicon){
+            let rank = scoreToRank(d["score"]);  
+            if(rank){
+              ctx.drawImage(scoreicon[rank - 1], x + dx * j, y + dy * i, iconsize, iconsize)
+            }
+          }
           break;
         };
       }
@@ -211,7 +252,7 @@ async function loadImage(src) {
 
 // データと対象Lvをもとに画像を作成する
 // 元画像に対するメダルアイコンの描画基準位置(左上座標を指定)と、バナーの間隔を指定
-async function createFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize) {
+async function createFullListImg(data, icon, scoreicon, target, ext, x, y, dx, dy, iconsize) {
   // 難易度表データ読み込み (タブ区切り UTF-8)
   showMessage("難易度表読み込み中・・・", true);
   let mlist = await loadCSVData(GITHUB_URL + "/list/" + target + ".txt")
@@ -223,7 +264,7 @@ async function createFullListImg(data, icon, target, ext, x, y, dx, dy, iconsize
   c.height = img.height;
   let ctx = c.getContext('2d');
   ctx.drawImage(img, 0, 0);
-  drawIcons(ctx, data, mlist, icon, x, y, dx, dy, iconsize);
+  drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize);
 
   // canvasから画像を作成し、img要素を生成する
   showMessage("画像の変換中・・・", true);
@@ -263,7 +304,8 @@ async function appendImgDLbtn(img, lv, mode, id) {
 }
 
 // メイン処理。レベルと動作モードを指定して一覧表を出力する
-async function main(lv, mode) {
+// hasscorerank : メダル情報にクリアランクを重ねて表示するか (TODO: 関数間を持ちまわっているが、もっといい方法がありそう。)
+async function main(lv, mode, hasscorerank) {
   showMessage("プレイデータの読み込み中・・・", true);
   let data = await wapper(lv);
   if (!data || data.length == 0 || !data[0]) {
@@ -273,28 +315,32 @@ async function main(lv, mode) {
     return;
   }
   showMessage("画像素材の読み込み中・・・", true);
-  let icon = await loadMedals(mode)
+  let icon = await loadMedals(mode);
+  let scoreicon = null;
+  if(hasscorerank){
+    scoreicon =  await loadRankMedals();
+  }
   showMessage("画像作成処理開始", true);
 
   // 一覧に戻るボタン
   let b = document.createElement('button');
   b.textContent = "一覧に戻る";
-  b.addEventListener('click', async () => { await allpage() });
+  b.addEventListener('click', async () => { await allpage(hasscorerank) });
 
   // 一覧表作成
   let c1 = null;
   let c2 = null;
   if (mode == M_CLEAR) {
     const targetname = "c" + lv
-    c1 = await createFullListImg(data, icon, targetname, ".jpg", 149, 213, 334, 92, 42)
+    c1 = await createFullListImg(data, icon, scoreicon, targetname, ".jpg", 149, 213, 334, 92, 42)
   }
   else if (lv == 46 && mode == M_FULLCOMBO) {
-    c1 = await createFullListImg(data, icon, "46_2", ".png", 277, 94, 276, 87, 73)
-    c2 = await createFullListImg(data, icon, "46_1", ".png", 277, 94, 276, 87, 73)
+    c1 = await createFullListImg(data, icon, scoreicon, "46_2", ".png", 277, 94, 276, 87, 73)
+    c2 = await createFullListImg(data, icon, scoreicon, "46_1", ".png", 277, 94, 276, 87, 73)
   }
   else if (lv == 47 && mode == M_FULLCOMBO) {
-    c1 = await createFullListImg(data, icon, "47_2", ".png", 277, 94, 276, 87, 73)
-    c2 = await createFullListImg(data, icon, "47_1", ".png", 277, 94, 276, 87, 73)
+    c1 = await createFullListImg(data, icon, scoreicon, "47_2", ".png", 277, 94, 276, 87, 73)
+    c2 = await createFullListImg(data, icon, scoreicon, "47_1", ".png", 277, 94, 276, 87, 73)
   } else {
     showMessage("動作エラーです。ブックマークに登録するURLが間違っていないか確認してください", false, true);
     return;
@@ -327,7 +373,10 @@ async function allpage_sub(mode, title, minlv, maxlv) {
     // 機能ボタン
     let b = document.createElement('button');
     b.textContent = "Lv" + i;
-    b.addEventListener('click', async ()=> {await main(i, mode)});
+    b.addEventListener('click', async ()=> {
+      const elements = document.getElementsByName("drawscorerank");
+      await main(i, mode, (elements.length == 1 && elements[0].checked));
+    });
     // ボタン更新日 (仮)
     // let p = document.createElement('p');
     // p.textContent = "yyyy/mm/dd更新"
@@ -338,10 +387,11 @@ async function allpage_sub(mode, title, minlv, maxlv) {
   }
   document.body.appendChild(maindiv);
   document.body.appendChild(document.createElement('br'));
+  document.body.appendChild(document.createElement('br'));
 }
 
 // 現在表示できるリストの一覧を表示して選択してもらうためのページ
-async function allpage() {
+async function allpage(hasscorerank) {
   cleanupHTML();
   // タイトルロゴ
   let logo = document.createElement('img');
@@ -351,13 +401,30 @@ async function allpage() {
 
   // クリア難易度表
   allpage_sub(M_CLEAR, "クリア難易度表", 47, 50)
-
-  document.body.appendChild(document.createElement('br'));
-
   // フルコン難易度表
   allpage_sub(M_FULLCOMBO, "フルコン難易度表", 46, 47)
 
+  // オプション
+  let t = document.createElement('h2');
+  t.textContent = "オプション";
+  document.body.appendChild(t);
+  let optiondiv = document.createElement('div');
+  optiondiv.className = "toggle-area";
+  // クリアランクメダル表示切り替えスイッチ
+  let srankcheck = document.createElement('input');
+  srankcheck.type = "checkbox";
+  srankcheck.id = "iddrawscorerank";
+  srankcheck.name = "drawscorerank";
+  srankcheck.checked = hasscorerank;
+  let sranklabel = document.createElement('label');
+  sranklabel.htmlFor = "iddrawscorerank";
+  sranklabel.innerText = "クリアランク表示";
+  optiondiv.appendChild(srankcheck);
+  optiondiv.appendChild(sranklabel);
+  document.body.appendChild(optiondiv);
+
   // フッター
+  document.body.appendChild(document.createElement('br'));
   let footer = document.createElement('footer');
   let help = document.createElement('a');
   help.innerText = "ヘルプ(README)";
@@ -373,7 +440,7 @@ async function allpage() {
 // mode 0 = 機能一覧表示
 // mode 1 = フルコン難易度 (デフォルト)
 // mode 2 = クリア難易度
-export default async (lv, mode=1) => {
+export default async (lv, mode=1, hasscorerank=false) => {
   // 初回アクセス時のみ、cssを取り込む
   cleanupHTML();
   document.head.innerHTML = "";
@@ -381,8 +448,8 @@ export default async (lv, mode=1) => {
   await loadCSS(GITHUB_URL + "/css/style.css");
 
   if (mode == M_ALL){
-    allpage();
+    allpage(hasscorerank);
   }else{
-    main(lv, mode);
+    main(lv, mode, hasscorerank);
   }
 };
