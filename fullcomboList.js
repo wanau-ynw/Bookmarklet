@@ -37,23 +37,25 @@ function medalurlToInt(murl) {
     "none": ERROR_MEDAL_ID,
   };
   let alp = murl.replace(`${MEDAL_IMAGE_URL}/meda_`, "").replace(".png", "")
-  return MEDAL_ID[alp]
+  return alp in MEDAL_ID ? MEDAL_ID[alp] : ERROR_MEDAL_ID;
 }
 
-// スコアをもとにクリアランクメダルの画像番号を返す。(未クリアでもAA以上を返す)
-// メダル番号が判別できない場合、nullを返す
-function scoreToRank(score) {
-  if(score){
-    if(score >= 98000)return 8;
-    if(score >= 95000)return 7;
-    if(score >= 90000)return 6;
-    if(score >= 82000)return 5;
-    if(score >= 72000)return 4;
-    if(score >= 62000)return 3;
-    if(score >= 50000)return 2;
-    if(score >= 1)return 1;
-  }
-  return null;
+// ランクのURLを元にランク番号を振る
+// Note: 未クリアだとAA以上にならない仕様があるため、スコアから計算して出してはいけない
+function rankurlToInt(murl) {
+  const MEDAL_ID = {
+    "s": 8,
+    "a3": 7,
+    "a2": 6,
+    "a1": 5,
+    "b": 4,
+    "c": 3,
+    "d": 2,
+    "e": 1,
+    "none": ERROR_MEDAL_ID,
+  };
+  let alp = murl.replace(`${MEDAL_IMAGE_URL}/rank_`, "").replace(".png", "")
+  return alp in MEDAL_ID ? MEDAL_ID[alp] : ERROR_MEDAL_ID;
 }
 
 // 画面上に文字を表示する
@@ -124,9 +126,10 @@ async function whatever(url) {
       li.children[0].firstElementChild.textContent,
       li.children[3].textContent.trim(),
       medalurlToInt(li.children[3].firstChild.src),
+      li.children[3].children.length >= 2 ? rankurlToInt(li.children[3].children[1].src) : ERROR_MEDAL_ID,
     ])
-    .map(([song, score, medal]) => {
-      return { song, score, medal, };
+    .map(([song, score, medal, rank]) => {
+      return { song, score, medal, rank};
     });
 }
 
@@ -217,8 +220,8 @@ function drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize) {
           ctx.drawImage(icon[d["medal"] - 1], x + dx * j, y + dy * i, iconsize, iconsize)
           // クリアランク表示
           if (scoreicon){
-            let rank = scoreToRank(d["score"]);  
-            if(rank){
+            let rank = d["rank"];  
+            if(rank != ERROR_MEDAL_ID){
               ctx.drawImage(scoreicon[rank - 1], x + dx * j, y + dy * i, iconsize, iconsize)
             }
           }
