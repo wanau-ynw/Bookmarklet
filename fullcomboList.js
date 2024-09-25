@@ -1,7 +1,6 @@
-const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/unilab/playdata/mu_lv.html"
-const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/unilab/images/p/common/medal";
-// const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
-const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
+const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/jamfizz/playdata/mu_lv.html"
+const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/jamfizz/images/p/common/medal";
+const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
 const ERROR_MEDAL_ID = 0
 
 // 動作モード
@@ -58,6 +57,15 @@ function rankurlToInt(murl) {
   return alp in MEDAL_ID ? MEDAL_ID[alp] : ERROR_MEDAL_ID;
 }
 
+// 曲名の比較用に一部表記ゆれがある文字をトリム・置換する
+// TODO: 表記ゆれ対応の改善 記号やカッコが半角・全角あってないケースが多い
+// 既知の公式ミス？
+// - Lv46 スクリーンHyに後置空白が入っている
+// - jam fizzで、曲名にある～が＼に置き換わってしまっている
+function songtrim(s) {
+  return s.trim().replaceAll("～","").replaceAll("＼","");
+}
+
 // 画面上に文字を表示する
 async function showMessage(txt, clean = false, error = false) {
   if (clean) {
@@ -82,24 +90,18 @@ async function cleanupHTML() {
 
 // 特定のLv曲一覧が、何ページあるか調べる
 async function getMaxLvPageNum(lv) {
-  let url = `${PLAY_DATA_URL}?page=0&level=${lv}`
-  let htmltxt = await fetch(url).then(resToText);
-  // ページ末尾にある改ページ用のURLを抽出し、最大ページ番号を求める
-  const pattern = /mu_lv.html\?page=(\d+)/g;
-  let match;
-  let maxNumber = -Infinity;
-  while ((match = pattern.exec(htmltxt)) !== null) {
-    const number = parseInt(match[1], 10);
-    if (number > maxNumber) {
-      maxNumber = number;
-    }
-  }
-  if (maxNumber === -Infinity) {
+  let url = `${PLAY_DATA_URL}?page=0&lv=${lv}`
+  let domparser = new DOMParser();
+  // ページ末尾にある改ページ用のリストから、最大ページ番号を求める
+  let pagelist = await fetch(url)
+    .then(resToText)
+    .then((text) => domparser.parseFromString(text, "text/html"))
+    .then((doc) => doc.getElementById("s_page"))
+  if (!pagelist || pagelist.children.length == 0) {
     showMessage("曲一覧ページの最大数取得時にエラーが発生しました", false, true);
     return 0;
   }
-  // リンクのページ番号は0から始まっているので、ページ数はそれに+1する
-  return maxNumber + 1;
+  return pagelist.children.length;
 }
 
 // URLを読み込み、そのページ内の全データを返す
@@ -123,7 +125,7 @@ async function whatever(url) {
   return Array.from(tableRows)
     .filter((li) => li.firstElementChild.className === "col_music_lv")  // 曲データだけ抽出
     .map((li) => [
-      li.children[0].firstElementChild.textContent,
+      songtrim(li.children[0].firstElementChild.textContent),
       li.children[3].textContent.trim(),
       medalurlToInt(li.children[3].firstChild.src),
       li.children[3].children.length >= 2 ? rankurlToInt(li.children[3].children[1].src) : ERROR_MEDAL_ID,
@@ -139,7 +141,7 @@ async function wapper(lv) {
   let pagelist = Array.from({ length: size }, (_, i) => [i, lv]);
 
   const promises = pagelist.map(([page, level]) =>
-    whatever(`${PLAY_DATA_URL}?page=${page}&level=${level}`)
+    whatever(`${PLAY_DATA_URL}?page=${page}&lv=${level}`)
   );
 
   const s = (await Promise.all(promises)).flat();
@@ -162,7 +164,7 @@ async function loadCSVData(filepath) {
   const response = await fetch(filepath);
   const text = await response.text();
   return text.trim().split('\n')
-    .map(line => line.split('\t').map(x => x.trim()));
+    .map(line => line.split('\t').map(x => songtrim(x)));
 }
 
 // 結果用メダル画像を読み込む (動作モードによってメダル画像の種類を変えている)
@@ -209,12 +211,7 @@ function drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize) {
     // 表データ内から曲を探す。もっといい方法がありそうだけど、せいぜい数百件のデータなので性能問題は無いでしょう
     for (let i = 0; i < mlist.length; i++) {
       for (let j = 0; j < mlist[i].length; j++) {
-        // TODO:
-        // 曲名の比較、公式サイト上の表記ゆれに対応したほうがいいかも。
-        // 難易度表を自分で書いた時の表記とずれてHitしないトラブルあり。
-        // 記号やカッコが半角・全角あってないケースが多い
-        // とりあえず、Lv46 スクリーンHyに後置空白が入っていることが分かったので、比較前にトリムだけはかけておく
-        if (mlist[i][j] === d["song"].trim()) {
+        if (mlist[i][j] === d["song"]) {
           // 見つかった場所に描画する。アイコンサイズは貼り付け先画像のサイズに合わせて変える
           // console.log("hit : " + (j+1) + ":" + (i+1) + " : " + "medal " + d["medal"]  + ":" + d["song"])
           ctx.drawImage(icon[d["medal"] - 1], x + dx * j, y + dy * i, iconsize, iconsize)
