@@ -3,18 +3,22 @@ body {
     font-size: 20px;
     margin: 2rem;
 }
+
 h2 {
     font-size: 100%;
     font-weight: bold;
     color: #333333;
     margin: 0.5rem 1rem;
 }
+
 .errormsg {
     color: red;
 }
+
 .button-container {
     display: flex;
 }
+
 .button-container button {
     display: block;
     text-align: center;
@@ -28,24 +32,83 @@ h2 {
     background: #e9f9fe;
     border-radius: 2rem;
 }
+
 .button-container button:hover {
     color: #fff;
     background: #01aae1;
 }
+
 .button-container p {
     font-size: 60%;
     text-align: center;
     margin: 4px 0;
     color: #707070;
 }
-footer {
+
+div.toggle-area {
+    margin: 0 2rem;
+    padding: 4px;
+    min-width: 30rem;
+}
+
+div.toggle-area input[type="checkbox"] {
+    display: none;
+}
+
+div.toggle-area label {
+    position: relative;
+    padding-left: 60px;
+    cursor: pointer;
+}
+
+div.toggle-area label::before,
+label::after {
+    content: "";
+    display: block;
     position: absolute;
-    bottom: 0;
+    top: 50%;
+    left: 0px;
+    transform: translateY(-50%);
+    border: 1.4px solid rgba(0, 0, 0, .3);
+    border-radius: 50%;
+    transition: .2s;
+}
+
+div.toggle-area label::before {
+    background-color: rgba(0, 106, 182, .2);
+    border: 1.4px solid rgba(0, 0, 0, .3);
+    border-radius: 12px;
+    height: 20px;
+    width: 40px;
+    top: 50%;
+    left: 5px;
+}
+
+div.toggle-area label::after {
+    background-color: #fff;
+    border-radius: 50%;
+    height: 23px;
+    width: 23px;
+    top: 50%;
+    left: 0px;
+}
+
+div.toggle-area input:checked+label::before {
+    background-color: #01aae1;
+}
+
+div.toggle-area input:checked+label::after {
+    left: 26px;
+}
+
+footer {
     padding: 1rem;
     font-size: 60%;
+    min-width: 40rem;
     color: #707070;
     border-top: 1px solid #909090;
 }
+
 footer a:hover {
     color: #000;
 }
