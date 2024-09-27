@@ -202,8 +202,10 @@ function loadRankMedals(){
 
 // データをもとに、キャンバスにメダル画像を張り付けていく。
 // scoreicon が設定されている場合、クリアランクも表示する (引数の仕様がわかりにくいかも)
+// 返り値として、描いたクリアメダルの数の一覧を返す
 function drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize) {
   console.log("draw icons")
+  let drawcounts = Array(11).fill(0);
   for (let d of data) {
     if (d["medal"] == ERROR_MEDAL_ID){
       continue;
@@ -215,6 +217,7 @@ function drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize) {
           // 見つかった場所に描画する。アイコンサイズは貼り付け先画像のサイズに合わせて変える
           // console.log("hit : " + (j+1) + ":" + (i+1) + " : " + "medal " + d["medal"]  + ":" + d["song"])
           ctx.drawImage(icon[d["medal"] - 1], x + dx * j, y + dy * i, iconsize, iconsize)
+          drawcounts[d["medal"] - 1] ++;
           // クリアランク表示
           if (scoreicon){
             let rank = d["rank"];  
@@ -227,6 +230,29 @@ function drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize) {
       }
     }
   }
+  return drawcounts;
+}
+
+// データをもとに、キャンバスにメダル数を記載する
+// 位置などは決め打ちしている。
+function drawMedalCounts(ctx, medalcounts) {
+  console.log("draw medal counts")
+  ctx.font = '22px "Varela Round"';
+  ctx.fillStyle = '#0C2D57';
+  ctx.textAlign = 'right';
+  let posy = 164;
+  // 配列は 0:黒丸～10:金の順番で入っているが、画像では逆順なので位置に注意
+  let total = 0;
+  for (let i=0;i<medalcounts.length;i++) {
+    let n = medalcounts[i];
+    let posx = 1710 - (98*i);
+    ctx.fillText(n.toString(), posx, posy);
+    total += n;
+  }
+  // 総計を書き込む
+  ctx.textAlign = 'center';
+  let posx = 1770;
+  ctx.fillText("/ " + total.toString(), posx, posy);
 }
 
 async function loadCSS(href) {
@@ -264,7 +290,13 @@ async function createFullListImg(data, icon, scoreicon, target, ext, x, y, dx, d
   c.height = img.height;
   let ctx = c.getContext('2d');
   ctx.drawImage(img, 0, 0);
-  drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize);
+  let drawcounts = drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize);
+
+  // クリア難易度表の場合、メダルの数も書き込む
+  // クリア難易度表かどうかの判定方法が微妙・・・
+  if(target.includes("c")){
+    drawMedalCounts(ctx, drawcounts);
+  }
 
   // canvasから画像を作成し、img要素を生成する
   showMessage("画像の変換中・・・", true);
@@ -446,6 +478,8 @@ export default async (lv, mode=1, hasscorerank=false) => {
   document.head.innerHTML = "";
   await loadCSS(GITHUB_URL + "/css/normalize.css");
   await loadCSS(GITHUB_URL + "/css/style.css");
+  // メダルカウント表示用フォント
+  await loadCSS("https://fonts.googleapis.com/css2?family=Varela+Round&display=swap");
 
   if (mode == M_ALL){
     allpage(hasscorerank);
