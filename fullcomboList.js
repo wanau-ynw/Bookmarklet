@@ -63,7 +63,7 @@ function rankurlToInt(murl) {
 // - Lv46 スクリーンHyに後置空白が入っている
 // - jam fizzで、曲名にある～が＼に置き換わってしまっている
 function songtrim(s) {
-  return s.trim().replaceAll("～","").replaceAll("＼","");
+  return s.trim().replaceAll("～","").replaceAll("〜","").replaceAll("＼","");
 }
 
 // 画面上に文字を表示する
@@ -400,7 +400,7 @@ async function allpage(hasscorerank) {
   document.body.appendChild(document.createElement('br'));
 
   // クリア難易度表
-  allpage_sub(M_CLEAR, "クリア難易度表", 47, 50)
+  allpage_sub(M_CLEAR, "クリア難易度表", 46, 50)
   // フルコン難易度表
   allpage_sub(M_FULLCOMBO, "フルコン難易度表", 46, 47)
 
