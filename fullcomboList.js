@@ -260,6 +260,7 @@ async function loadCSS(href) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = href;
+    link.crossOrigin = "anonymous"; // iPhone対応
     link.onload = () => resolve(href);
     link.onerror = () => reject(new Error(`Failed to load CSS: ${href}`));
     document.head.appendChild(link);
