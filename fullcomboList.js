@@ -362,18 +362,15 @@ async function main(lv, mode, hasscorerank) {
 
   // 一覧表作成
   let c1 = null;
-  let c2 = null;
   if (mode == M_CLEAR) {
     const targetname = "c" + lv
     c1 = await createFullListImg(data, icon, scoreicon, targetname, ".jpg", 149, 213, 334, 92, 42)
   }
   else if (lv == 46 && mode == M_FULLCOMBO) {
-    c1 = await createFullListImg(data, icon, scoreicon, "46_2", ".png", 277, 94, 276, 87, 73)
-    c2 = await createFullListImg(data, icon, scoreicon, "46_1", ".png", 277, 94, 276, 87, 73)
+    c1 = await createFullListImg(data, icon, scoreicon, "f46", ".jpg", 277, 94, 276, 87, 73)
   }
   else if (lv == 47 && mode == M_FULLCOMBO) {
-    c1 = await createFullListImg(data, icon, scoreicon, "47_2", ".png", 277, 94, 276, 87, 73)
-    c2 = await createFullListImg(data, icon, scoreicon, "47_1", ".png", 277, 94, 276, 87, 73)
+    c1 = await createFullListImg(data, icon, scoreicon, "f47", ".jpg", 277, 94, 276, 87, 73)
   } else {
     showMessage("動作エラーです。ブックマークに登録するURLが間違っていないか確認してください", false, true);
     return;
@@ -382,11 +379,9 @@ async function main(lv, mode, hasscorerank) {
   // もとのドキュメントを消し去って、ページを構築
   cleanupHTML();
   document.body.appendChild(b);
-  if(c1)await appendImgDLbtn(c1, lv, mode, (c2?"-1":"")); // 画像が2つあるなら、区別するためのidを追加しておく
-  if(c2)await appendImgDLbtn(c2, lv, mode, "-2");
+  if(c1)await appendImgDLbtn(c1, lv, mode, "");
   document.body.appendChild(document.createElement('br'));
   if(c1)document.body.appendChild(c1);
-  if(c2)document.body.appendChild(c2);
 }
 
 // 現在表示できるリストの一覧を表示して選択してもらうためのページ部品。
