@@ -1,111 +1,25 @@
 const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/jamfizz/playdata/mu_lv.html"
-const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/jamfizz/images/p/common/medal";
 // const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
 const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
-const ERROR_MEDAL_ID = 0
 
 // 動作モード
 const M_ALL = 0
 const M_FULLCOMBO = 1
 const M_CLEAR = 2
 
-// 取得したHTMLの文字コードを整える
-function resToText(res) {
-  return res.arrayBuffer().then((buffer) => {
-    if (res.headers.get("Content-Type").includes("UTF-8")) {
-      return new TextDecoder().decode(buffer);
-    } else {
-      return new TextDecoder("Shift_JIS").decode(buffer)
-    }
-  })
-}
-
-// メダルのURLを元にメダル番号を振る
-function medalurlToInt(murl) {
-  const MEDAL_ID = {
-    "a": 11,
-    "b": 10,
-    "c": 9,
-    "d": 8,
-    "e": 7,
-    "f": 6,
-    "g": 5,
-    "h": 3,
-    "i": 2,
-    "j": 1,
-    "k": 4,
-    "none": ERROR_MEDAL_ID,
-  };
-  let alp = murl.replace(`${MEDAL_IMAGE_URL}/meda_`, "").replace(".png", "")
-  return alp in MEDAL_ID ? MEDAL_ID[alp] : ERROR_MEDAL_ID;
-}
-
-// ランクのURLを元にランク番号を振る
-// Note: 未クリアだとAA以上にならない仕様があるため、スコアから計算して出してはいけない
-function rankurlToInt(murl) {
-  const MEDAL_ID = {
-    "s": 8,
-    "a3": 7,
-    "a2": 6,
-    "a1": 5,
-    "b": 4,
-    "c": 3,
-    "d": 2,
-    "e": 1,
-    "none": ERROR_MEDAL_ID,
-  };
-  let alp = murl.replace(`${MEDAL_IMAGE_URL}/rank_`, "").replace(".png", "")
-  return alp in MEDAL_ID ? MEDAL_ID[alp] : ERROR_MEDAL_ID;
-}
-
-// 曲名の比較用に一部表記ゆれがある文字をトリム・置換する
-// TODO: 表記ゆれ対応の改善 記号やカッコが半角・全角あってないケースが多い
-// 既知の公式ミス？
-// - 波線～が、2パターンある。どちらも無視する。
-// - jam fizzで、曲名にある～が＼に置き換わってしまっている
-// - Lv45 BLAZE∞BREEZE - WHITE LIE Version - の1つ目の"-"前に半角空白が2連続で入っている。1つとして扱う。
-// - Lv46 スクリーンHyに後置空白が入っている。前後空白はトリムする
-// - 曲ごとに全角空白と半角空白・全角！と半角!の使い分けがバラバラ。半角に統一する
-function songtrim(s) {
-  return s.trim().replaceAll("～","").replaceAll("〜","").replaceAll("＼","").replaceAll("  "," ").replaceAll("　"," ").replaceAll("！","!");
-}
-
-// 画面上に文字を表示する
-async function showMessage(txt, clean = false, error = false) {
-  if (clean) {
-    cleanupHTML();
-  }
-  let html = "";
-  if (error){
-    html += '<div class="errormsg">';
-  }
-  html += txt;
-  if (error){
-    html += '</div">';
-  }
-  html += "<br>";
-  document.body.innerHTML += html;
-}
-
-// 画面を消去する
-async function cleanupHTML() {
-  document.body.innerHTML = "";
-}
-
-// 特定のLv曲一覧が、何ページあるか調べる
-async function getMaxLvPageNum(lv) {
-  let url = `${PLAY_DATA_URL}?page=0&lv=${lv}`
-  let domparser = new DOMParser();
-  // ページ末尾にある改ページ用のリストから、最大ページ番号を求める
-  let pagelist = await fetch(url)
-    .then(resToText)
-    .then((text) => domparser.parseFromString(text, "text/html"))
-    .then((doc) => doc.getElementById("s_page"))
-  if (!pagelist || pagelist.children.length == 0) {
-    showMessage("曲一覧ページの最大数取得時にエラーが発生しました", false, true);
-    return 0;
-  }
-  return pagelist.children.length;
+// 外部jacvascriptファイルを読み込む
+// NOTE: ブックマークレットで動かしているせいか、export-importを用いた
+//       外部モジュールの呼び出しが使えない模様。直接ファイルを読む
+// NOTE: 性質上、この関数を外部ファイルに置くことができない・・・
+async function loadScript(src) {
+  return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.crossOrigin = "anonymous"; // CORSを許可するための設定
+      script.onload = () => resolve(src);
+      script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+      document.head.appendChild(script);
+  });
 }
 
 // URLを読み込み、そのページ内の全データを返す
@@ -132,7 +46,7 @@ async function whatever(url) {
       songtrim(li.children[0].firstElementChild.textContent),
       li.children[3].textContent.trim(),
       medalurlToInt(li.children[3].firstChild.src),
-      li.children[3].children.length >= 2 ? rankurlToInt(li.children[3].children[1].src) : ERROR_MEDAL_ID,
+      li.children[3].children.length >= 2 ? rankurlToInt(li.children[3].children[1].src) : getErrorMedalID(),
     ])
     .map(([song, score, medal, rank]) => {
       return { song, score, medal, rank};
@@ -141,7 +55,11 @@ async function whatever(url) {
 
 // 対象の全ページに対し、データの取得を行う
 async function wapper(lv) {
-  const size = await getMaxLvPageNum(lv);
+  const size = await getMaxLvPageNum(`${PLAY_DATA_URL}?page=0&lv=${lv}`);
+  if (size == -1){
+    showMessage("曲一覧ページの最大数取得時にエラーが発生しました", false, true);
+    return null;
+  }
   let pagelist = Array.from({ length: size }, (_, i) => [i, lv]);
 
   const promises = pagelist.map(([page, level]) =>
@@ -171,39 +89,6 @@ async function loadCSVData(filepath) {
     .map(line => line.split('\t').map(x => songtrim(x)));
 }
 
-// 結果用メダル画像を読み込む (動作モードによってメダル画像の種類を変えている)
-function loadMedals(mode){
-  let iconbasename = "icon"
-  if (mode == M_CLEAR){
-    iconbasename = "c_icon"
-  }
-  async function load(id){
-      let src = GITHUB_URL + "/" + iconbasename + "/c_" + id + ".png";
-      const img = new Image()
-      img.src = src
-      img.crossOrigin = "anonymous"; // 画像ダウンロード用
-      await img.decode()
-      return img
-  }
-  let list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-  return Promise.all(list.map(id => load(id)))
-}
-
-// クリアランク用メダル画像を読み込む
-function loadRankMedals(){
-  let iconbasename = "icon"
-  async function load(id){
-      let src = GITHUB_URL + "/" + iconbasename + "/s_" + id + ".png";
-      const img = new Image()
-      img.src = src
-      img.crossOrigin = "anonymous"; // 画像ダウンロード用
-      await img.decode()
-      return img
-  }
-  let list = [1, 2, 3, 4, 5, 6, 7, 8]
-  return Promise.all(list.map(id => load(id)))
-}
-
 // データをもとに、キャンバスにメダル画像を張り付けていく。
 // scoreicon が設定されている場合、クリアランクも表示する (引数の仕様がわかりにくいかも)
 // 返り値として、描いたクリアメダルの数の一覧を返す
@@ -211,7 +96,7 @@ function drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize) {
   console.log("draw icons")
   let drawcounts = Array(11).fill(0);
   for (let d of data) {
-    if (d["medal"] == ERROR_MEDAL_ID){
+    if (isErrorMedalID(d["medal"])){
       continue;
     }
     // 表データ内から曲を探す。もっといい方法がありそうだけど、せいぜい数百件のデータなので性能問題は無いでしょう
@@ -225,7 +110,7 @@ function drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize) {
           // クリアランク表示
           if (scoreicon){
             let rank = d["rank"];  
-            if(rank != ERROR_MEDAL_ID){
+            if (!isErrorMedalID(rank)) {
               ctx.drawImage(scoreicon[rank - 1], x + dx * j, y + dy * i, iconsize, iconsize)
             }
           }
@@ -257,28 +142,6 @@ function drawMedalCounts(ctx, medalcounts) {
   ctx.textAlign = 'center';
   let posx = 1770;
   ctx.fillText("/ " + total.toString(), posx, posy);
-}
-
-async function loadCSS(href) {
-  return new Promise((resolve, reject) => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = href;
-    link.crossOrigin = "anonymous"; // iPhone対応
-    link.onload = () => resolve(href);
-    link.onerror = () => reject(new Error(`Failed to load CSS: ${href}`));
-    document.head.appendChild(link);
-  });
-}
-
-async function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-    img.crossOrigin = "anonymous"; // 画像ダウンロード用
-  });
 }
 
 // データと対象Lvをもとに画像を作成する
@@ -352,10 +215,10 @@ async function main(lv, mode, hasscorerank) {
     return;
   }
   showMessage("画像素材の読み込み中・・・", true);
-  let icon = await loadMedals(mode);
+  let icon = await loadMedals(GITHUB_URL, mode == M_FULLCOMBO); // フルコンボ表の時はメダル画像に縁取りを付ける
   let scoreicon = null;
   if(hasscorerank){
-    scoreicon =  await loadRankMedals();
+    scoreicon =  await loadRankMedals(GITHUB_URL);
   }
   showMessage("画像作成処理開始", true);
 
@@ -471,14 +334,16 @@ async function allpage(hasscorerank) {
 // mode 1 = フルコン難易度 (デフォルト)
 // mode 2 = クリア難易度
 export default async (lv, mode=1, hasscorerank=false) => {
-  // 初回アクセス時のみ、cssを取り込む
-  cleanupHTML();
+  // 初回アクセス時のみ、ヘッダに必要情報を取り込む
   document.head.innerHTML = "";
+  document.body.innerHTML = "";
+  await loadScript(GITHUB_URL + "/js/logger.js");
+  await loadScript(GITHUB_URL + "/js/webtool.js");
   await loadCSS(GITHUB_URL + "/css/normalize.css");
   await loadCSS(GITHUB_URL + "/css/style.css");
   // メダルカウント表示用フォント
   await loadCSS("https://fonts.googleapis.com/css2?family=Varela+Round&display=swap");
-
+  
   if (mode == M_ALL){
     allpage(hasscorerank);
   }else{
