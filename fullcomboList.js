@@ -1,6 +1,7 @@
 const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/jamfizz/playdata/mu_lv.html"
 const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/jamfizz/images/p/common/medal";
-const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
+// const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
+const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
 const ERROR_MEDAL_ID = 0
 
 // 動作モード
