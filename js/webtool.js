@@ -4,6 +4,9 @@
  */
 
 const MEDAL_IMAGE_URL = "https://eacache.s.konaminet.jp/game/popn/jamfizz/images/p/common/medal";
+const STATUS_URL = "https://p.eagate.573.jp/game/popn/jamfizz/playdata/index.html"
+const TOMO_URL = "https://p.eagate.573.jp/game/popn/jamfizz/p_friend/vs.html"
+const TOMO_VSLV_URL = "https://p.eagate.573.jp/game/popn/jamfizz/p_friend/vs_lv.html?version=0&category=0&keyword="
 const ERROR_MEDAL_ID = 0
 
 /**
@@ -29,6 +32,52 @@ function resToText(res) {
 // - 曲ごとに全角空白と半角空白・全角！と半角!の使い分けがバラバラ。半角に統一する
 function songtrim(s) {
   return s.trim().replaceAll("～","").replaceAll("〜","").replaceAll("＼","").replaceAll("  "," ").replaceAll("　"," ").replaceAll("！","!");
+}
+
+/**
+ * ユーザー名を返す
+ */
+async function getUserName() {
+    let domparser = new DOMParser();
+    let status = await fetch(STATUS_URL)
+        .then(resToText)
+        .then((text) => domparser.parseFromString(text, "text/html"))
+        .then((doc) => doc.querySelector("#status_table > div.st_box")
+        );
+    if(!status || status.children.length < 2){
+        return null;
+    }
+    // ユーザ名はステータスboxの2つ目の要素に入っている
+    return status.children[1].textContent;
+}
+
+/**
+ * ポプともの一覧を返す(idと名前のリスト)
+ */
+async function getPoptomoList() {
+    let domparser = new DOMParser();
+    let users = await fetch(TOMO_URL)
+        .then(resToText)
+        .then((text) => domparser.parseFromString(text, "text/html"))
+        .then((doc) => doc.querySelector('select[name="id"]')
+        );
+    if(!users || users.options.length <= 1){
+        return null;
+    }
+    // ユーザ一覧の先頭は"未選択"なので、それ以外をリストにして返す
+    return Array.from(users.options)
+    .slice(1) // 先頭のoptionを除外
+    .map(option => ({
+        id: option.value,
+        name: option.text
+    }));
+}
+
+/**
+ * ポプともレベル比較用のURLを返す
+ */
+function getTomoDiffUrl(id, lv, page){
+    return `${TOMO_VSLV_URL}&page=${page}&lv=${lv}&id=${id}`;
 }
 
 /**
