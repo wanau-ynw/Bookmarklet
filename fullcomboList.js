@@ -60,10 +60,13 @@ function rankurlToInt(murl) {
 // 曲名の比較用に一部表記ゆれがある文字をトリム・置換する
 // TODO: 表記ゆれ対応の改善 記号やカッコが半角・全角あってないケースが多い
 // 既知の公式ミス？
-// - Lv46 スクリーンHyに後置空白が入っている
+// - 波線～が、2パターンある。どちらも無視する。
 // - jam fizzで、曲名にある～が＼に置き換わってしまっている
+// - Lv45 BLAZE∞BREEZE - WHITE LIE Version - の1つ目の"-"前に半角空白が2連続で入っている。1つとして扱う。
+// - Lv46 スクリーンHyに後置空白が入っている。前後空白はトリムする
+// - 曲ごとに全角空白と半角空白・全角！と半角!の使い分けがバラバラ。半角に統一する
 function songtrim(s) {
-  return s.trim().replaceAll("～","").replaceAll("〜","").replaceAll("＼","");
+  return s.trim().replaceAll("～","").replaceAll("〜","").replaceAll("＼","").replaceAll("  "," ").replaceAll("　"," ").replaceAll("！","!");
 }
 
 // 画面上に文字を表示する
@@ -363,14 +366,12 @@ async function main(lv, mode, hasscorerank) {
   // 一覧表作成
   let c1 = null;
   if (mode == M_CLEAR) {
-    const targetname = "c" + lv
+    const targetname = "c" + lv;
     c1 = await createFullListImg(data, icon, scoreicon, targetname, ".jpg", 149, 213, 334, 92, 42)
   }
-  else if (lv == 46 && mode == M_FULLCOMBO) {
-    c1 = await createFullListImg(data, icon, scoreicon, "f46", ".jpg", 277, 94, 276, 87, 73)
-  }
-  else if (lv == 47 && mode == M_FULLCOMBO) {
-    c1 = await createFullListImg(data, icon, scoreicon, "f47", ".jpg", 277, 94, 276, 87, 73)
+  else if (mode == M_FULLCOMBO) {
+    const targetname = "f" + lv;
+    c1 = await createFullListImg(data, icon, scoreicon, targetname, ".jpg", 277, 94, 276, 87, 73)
   } else {
     showMessage("動作エラーです。ブックマークに登録するURLが間違っていないか確認してください", false, true);
     return;
@@ -430,7 +431,7 @@ async function allpage(hasscorerank) {
   // クリア難易度表
   allpage_sub(M_CLEAR, "クリア難易度表", 46, 50)
   // フルコン難易度表
-  allpage_sub(M_FULLCOMBO, "フルコン難易度表", 46, 47)
+  allpage_sub(M_FULLCOMBO, "フルコン難易度表", 45, 47)
 
   // オプション
   let t = document.createElement('h2');
