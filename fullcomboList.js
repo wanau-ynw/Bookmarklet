@@ -363,14 +363,12 @@ async function main(lv, mode, hasscorerank) {
   // 一覧表作成
   let c1 = null;
   if (mode == M_CLEAR) {
-    const targetname = "c" + lv
+    const targetname = "c" + lv;
     c1 = await createFullListImg(data, icon, scoreicon, targetname, ".jpg", 149, 213, 334, 92, 42)
   }
-  else if (lv == 46 && mode == M_FULLCOMBO) {
-    c1 = await createFullListImg(data, icon, scoreicon, "f46", ".jpg", 277, 94, 276, 87, 73)
-  }
-  else if (lv == 47 && mode == M_FULLCOMBO) {
-    c1 = await createFullListImg(data, icon, scoreicon, "f47", ".jpg", 277, 94, 276, 87, 73)
+  else if (mode == M_FULLCOMBO) {
+    const targetname = "f" + lv;
+    c1 = await createFullListImg(data, icon, scoreicon, targetname, ".jpg", 277, 94, 276, 87, 73)
   } else {
     showMessage("動作エラーです。ブックマークに登録するURLが間違っていないか確認してください", false, true);
     return;
@@ -430,7 +428,7 @@ async function allpage(hasscorerank) {
   // クリア難易度表
   allpage_sub(M_CLEAR, "クリア難易度表", 46, 50)
   // フルコン難易度表
-  allpage_sub(M_FULLCOMBO, "フルコン難易度表", 46, 47)
+  allpage_sub(M_FULLCOMBO, "フルコン難易度表", 45, 47)
 
   // オプション
   let t = document.createElement('h2');
