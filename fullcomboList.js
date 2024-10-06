@@ -60,10 +60,13 @@ function rankurlToInt(murl) {
 // 曲名の比較用に一部表記ゆれがある文字をトリム・置換する
 // TODO: 表記ゆれ対応の改善 記号やカッコが半角・全角あってないケースが多い
 // 既知の公式ミス？
-// - Lv46 スクリーンHyに後置空白が入っている
+// - 波線～が、2パターンある。どちらも無視する。
 // - jam fizzで、曲名にある～が＼に置き換わってしまっている
+// - Lv45 BLAZE∞BREEZE - WHITE LIE Version - の1つ目の"-"前に半角空白が2連続で入っている。1つとして扱う。
+// - Lv46 スクリーンHyに後置空白が入っている。前後空白はトリムする
+// - 曲ごとに全角空白と半角空白・全角！と半角!の使い分けがバラバラ。半角に統一する
 function songtrim(s) {
-  return s.trim().replaceAll("～","").replaceAll("〜","").replaceAll("＼","");
+  return s.trim().replaceAll("～","").replaceAll("〜","").replaceAll("＼","").replaceAll("  "," ").replaceAll("　"," ").replaceAll("！","!");
 }
 
 // 画面上に文字を表示する
