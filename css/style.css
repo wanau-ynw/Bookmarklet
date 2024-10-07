@@ -11,6 +11,10 @@ h2 {
     margin: 0.5rem 1rem;
 }
 
+.h2_p {
+    margin: 0rem 2rem;
+}
+
 .errormsg {
     color: red;
 }

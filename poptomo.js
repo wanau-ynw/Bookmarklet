@@ -8,7 +8,9 @@ const STORAGE_KEY = {
 }
 const PLACEHOLDER_ID = {
     MUSIC_COUNT: "ph_mcount",
+    WIN_LOSE_TEXT: "ph_wl_text",
     WIN_LOSE_GRAPH: "ph_wl_graph",
+    AVE_SCORE_TEXT: "ph_ave_score",
     MUSIC_LIST: "ph_mlist",
 }
 
@@ -181,10 +183,23 @@ function countResults(data) {
     let p1skip = 0;
     let p2skip = 0;
 
+    let p1ScoreTotal = 0; // p1のスコア合計
+    let p1ScoreCount = 0; // p1のスコアが0でない回数
+    let p2ScoreTotal = 0; // p2のスコア合計
+    let p2ScoreCount = 0; // p2のスコアが0でない回数
+
     data.forEach(d => {
         totalcount++;
         let s1 = d["p1Score"];
         let s2 = d["p2Score"];
+        if (s1 > 0) { 
+            p1ScoreTotal += parseInt(s1); 
+            p1ScoreCount++; 
+        }
+        if (s2 > 0) { 
+            p2ScoreTotal += parseInt(s2); 
+            p2ScoreCount++; 
+        }
         if (s1 == 0 && s2 == 0) { allskip++; return; }
         if (s1 == 0) { p1skip++; return; }
         if (s2 == 0) { p2skip++; return; }
@@ -194,6 +209,9 @@ function countResults(data) {
         losecount++;
     });
 
+    const p1AverageScore = (p1ScoreCount > 0 ? (p1ScoreTotal / p1ScoreCount) : 0);
+    const p2AverageScore = (p2ScoreCount > 0 ? (p2ScoreTotal / p2ScoreCount) : 0);
+
     return {
         totalcount,
         allplaycount,
@@ -202,15 +220,14 @@ function countResults(data) {
         drawcount,
         allskip,
         p1skip,
-        p2skip
+        p2skip,
+        p1AverageScore,
+        p2AverageScore
     };
 }
 
 // スクリプト生成関数
-function addGraphScript(data) {
-    // 勝ち負け数をカウントする
-    const resultCounts = countResults(data);
-
+function addGraphScript(resultCounts) {
     // 以下の要素は、スクリプトに埋め込むかどうか未確定なので全部合わせて1つの文字にする
     let addLabelStr = "";
     let addCountStr = "";
@@ -314,6 +331,7 @@ async function diffpage(name, id, tomo, lv) {
     }
 
     cleanupHTML();
+    let tomoname = tomo[id]["name"];
     // 戻るボタン
     document.body.appendChild(await backButton(name, tomo));
     // 基礎情報とグラフを表示する列
@@ -323,8 +341,16 @@ async function diffpage(name, id, tomo, lv) {
     let infocol = document.createElement('div');
     infocol.className = "col-5";
     let title = document.createElement('h2');
-    title.innerText = `Lv${lv} ${name} vs ${tomo[id]["name"]}`;
+    title.innerText = `Lv${lv} ${name} vs ${tomoname}`;
     infocol.appendChild(title);
+    let winlose = document.createElement('p');
+    winlose.id = PLACEHOLDER_ID.WIN_LOSE_TEXT;
+    winlose.className = "h2_p";
+    infocol.appendChild(winlose);
+    let avescore = document.createElement('p');
+    avescore.id = PLACEHOLDER_ID.AVE_SCORE_TEXT;
+    avescore.className = "h2_p";
+    infocol.appendChild(avescore);
 
     // オプション
     let t = document.createElement('h2');
@@ -341,7 +367,7 @@ async function diffpage(name, id, tomo, lv) {
     skipEmptydataCheck.addEventListener('change', async (event) => {
         const isChecked = event.target.checked;
         setStorageData(STORAGE_KEY.SELECTED_SKIP_EMPTY, isChecked);
-        await setPlaceholderData(data);
+        await setPlaceholderData(data, name, tomoname);
     });
     let selabel = document.createElement('label');
     selabel.htmlFor = "skip-emptydata";
@@ -370,20 +396,20 @@ async function diffpage(name, id, tomo, lv) {
     document.body.appendChild(baserow);
 
     // 一覧表 プレースホルダ
-    addDiffList(name, tomo[id]["name"]);
+    addDiffList(name, tomoname);
     document.body.appendChild(document.createElement('br'));
 
     // 戻るボタン
     document.body.appendChild(await backButton(name, tomo));
 
     // プレースホルダのデータをセットする
-    await setPlaceholderData(data);
+    await setPlaceholderData(data, name, tomoname);
 }
 
 /**
  * 結果ページの画面にデータを反映する。オプションによって動的に変える
  */
-async function setPlaceholderData(data){
+async function setPlaceholderData(data, name, tomoname){
     let skipEmptydata = await getStorageData(STORAGE_KEY.SELECTED_SKIP_EMPTY, () => true);
     let subdata = [];
     data.forEach(d => {
@@ -393,9 +419,24 @@ async function setPlaceholderData(data){
         subdata.push(d);
     });
 
+    // 勝ち負け数をカウントする
+    const allResultCounts = countResults(data);
+    const subResultCounts = countResults(subdata);
+
+    let winlose = document.getElementById(PLACEHOLDER_ID.WIN_LOSE_TEXT);
+    winlose.innerText = `戦績 : ${allResultCounts.wincount}勝 ${allResultCounts.losecount}敗 ${allResultCounts.drawcount}分け`;
+
+    let avescore = document.getElementById(PLACEHOLDER_ID.AVE_SCORE_TEXT);
+    avescore.innerHTML = `
+    平均スコア<br>
+    &nbsp;&nbsp;${name}: ${allResultCounts.p1AverageScore.toFixed(1)}<br>
+    &nbsp;&nbsp;${tomoname}: ${allResultCounts.p2AverageScore.toFixed(1)}
+    `;
+
     let mcount = document.getElementById(PLACEHOLDER_ID.MUSIC_COUNT);
     mcount.innerText = `曲一覧(${subdata.length}曲)`;
-    addGraphScript(subdata);
+
+    addGraphScript(subResultCounts);
     addDiffListScript(subdata);
 }
 
