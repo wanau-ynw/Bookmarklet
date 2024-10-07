@@ -1,5 +1,10 @@
 // const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
 const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
+const STORAGE_KEY = {
+    SELECTED_LV: "selected_lv",
+    SELECTED_TOMO_ID: "selected_tomo_id",
+    LV_DATA: (id, lv) => `tomo_${id}_${lv}`,
+}
 
 // 外部jacvascriptファイルを読み込む
 // NOTE: ブックマークレットで動かしているせいか、export-importを用いた
@@ -291,7 +296,7 @@ async function backButton(name, tomo) {
 async function diffpage(name, id, tomo, lv, skipEmpdydata) {
     cleanupHTML();
     showMessage("プレイデータの読み込み中・・・", true);
-    let data = await wapper(id, lv, skipEmpdydata);
+    let data = await getStorageData(STORAGE_KEY.LV_DATA(id, lv), () => wapper(id, lv, skipEmpdydata));
     if (!data || data.length == 0 || !data[0]) {
         showMessage("曲一覧数取得時にエラーが発生しました", false, true);
         document.body.appendChild(await backButton(name, tomo));
@@ -356,10 +361,14 @@ async function main(name, tomo) {
     tomosLabel.innerText = '比較相手: ';
     document.body.appendChild(tomosLabel);
     let selectTomo = document.createElement('select');
+    let selectTomoDefoID = await getStorageData(STORAGE_KEY.SELECTED_TOMO_ID, () => 0);
     tomo.forEach(t => {
         let option = document.createElement('option');
         option.value = t.id; // IDをvalueとして設定
         option.innerText = t.name; // 名前を表示
+        if (t.id === selectTomoDefoID){
+            option.selected = true;
+        }
         selectTomo.appendChild(option);
     });
     document.body.appendChild(selectTomo);
@@ -376,7 +385,7 @@ async function main(name, tomo) {
         option.innerText = i;
         selectLv.appendChild(option);
     }
-    selectLv.value = 45; // 初期値をLv45に仮設定
+    selectLv.value = await getStorageData(STORAGE_KEY.SELECTED_LV, () => 45); // 初期値をLv45に仮設定
     document.body.appendChild(selectLv);
     document.body.appendChild(document.createElement('br'));
 
@@ -403,6 +412,8 @@ async function main(name, tomo) {
     let compareButton = document.createElement('button');
     compareButton.innerText = '比較実行';
     compareButton.onclick = async () => {
+        setStorageData(STORAGE_KEY.SELECTED_LV, selectLv.value);
+        setStorageData(STORAGE_KEY.SELECTED_TOMO_ID, selectTomo.value);
         await diffpage(name, selectTomo.value, tomo, selectLv.value, skipEmptydataCheck.checked);
     };
     document.body.appendChild(compareButton);
@@ -426,6 +437,9 @@ export default async () => {
     // 初回アクセス時のみ、ヘッダに必要情報を取り込む
     document.head.innerHTML = "";
     document.body.innerHTML = "初期化中・・・";
+    // セッションストレージを初期化
+    sessionStorage.clear();
+    // js/cssの取り込み
     await loadScript(GITHUB_URL + "/js/jquery-3.3.1.slim.min.js"); // 注意: 読み込む順番を変えてはいけない
     await loadScript(GITHUB_URL + "/js/popper.min.js");
     await loadScript(GITHUB_URL + "/js/bootstrap.min.js");

@@ -2,6 +2,11 @@ const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/jamfizz/playdata/mu_lv.
 // const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
 const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
 
+const STORAGE_KEY = {
+    LV_DATA: (lv) => `mydata_${lv}`,
+}
+
+
 // 動作モード
 const M_ALL = 0
 const M_FULLCOMBO = 1
@@ -207,7 +212,7 @@ async function appendImgDLbtn(img, lv, mode, id) {
 // hasscorerank : メダル情報にクリアランクを重ねて表示するか (TODO: 関数間を持ちまわっているが、もっといい方法がありそう。)
 async function main(lv, mode, hasscorerank) {
   showMessage("プレイデータの読み込み中・・・", true);
-  let data = await wapper(lv);
+  let data = await getStorageData(STORAGE_KEY.LV_DATA(lv), () => wapper(lv));
   if (!data || data.length == 0 || !data[0]) {
     showMessage(
       "プレイデータの読み取りに失敗しました。<br>" + 
@@ -334,6 +339,8 @@ async function allpage(hasscorerank) {
 // mode 1 = フルコン難易度 (デフォルト)
 // mode 2 = クリア難易度
 export default async (lv, mode=1, hasscorerank=false) => {
+  // セッションストレージを初期化
+  sessionStorage.clear();
   // 初回アクセス時のみ、ヘッダに必要情報を取り込む
   document.head.innerHTML = "";
   document.body.innerHTML = "";

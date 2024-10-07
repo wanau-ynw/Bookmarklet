@@ -34,6 +34,27 @@ function songtrim(s) {
   return s.trim().replaceAll("～","").replaceAll("〜","").replaceAll("＼","").replaceAll("  "," ").replaceAll("　"," ").replaceAll("！","!");
 }
 
+// セッションストレージのデータを取得または新規作成して保存する
+async function getStorageData(key, createDataFunc) {
+  let data = sessionStorage.getItem(key);
+  if (data === null) {
+    let newData = await Promise.resolve(createDataFunc()); // 同期関数・非同期関数どちらが渡されてもいいように。
+    let jsondata = JSON.stringify(newData);
+    sessionStorage.setItem(key, jsondata);
+    console.log("save sessionStorage : " + key + " : about " + jsondata.length + "byte");
+    data = newData;
+  } else {
+    console.log("load sessionStorage : " + key);
+    data = JSON.parse(data);
+  }
+  return data;
+}
+
+function setStorageData(key, data) {
+  sessionStorage.setItem(key, JSON.stringify(data));
+}
+
+
 /**
  * ユーザー名を返す
  */
