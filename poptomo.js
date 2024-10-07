@@ -3,7 +3,13 @@ const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
 const STORAGE_KEY = {
     SELECTED_LV: "selected_lv",
     SELECTED_TOMO_ID: "selected_tomo_id",
+    SELECTED_SKIP_EMPTY: "skip_empty",
     LV_DATA: (id, lv) => `tomo_${id}_${lv}`,
+}
+const PLACEHOLDER_ID = {
+    MUSIC_COUNT: "ph_mcount",
+    WIN_LOSE_GRAPH: "ph_wl_graph",
+    MUSIC_LIST: "ph_mlist",
 }
 
 // 外部jacvascriptファイルを読み込む
@@ -22,7 +28,7 @@ async function loadScript(src) {
 }
 
 // URLを読み込み、そのページ内の全データを返す
-async function whatever(url, skipEmpdydata) {
+async function whatever(url) {
     // データを格納するための配列を作成
     const results = [];
     console.log("load url : " + url);
@@ -52,10 +58,6 @@ async function whatever(url, skipEmpdydata) {
             const p2medal = medalurlToInt(cells[2].firstChild.src);
             const p2rank = rankurlToInt(cells[2].children[1].src);
 
-            if(skipEmpdydata && (p1Score == 0 || p2Score == 0)){
-                continue;
-            }
-
             // 結果をオブジェクトとして格納
             results.push({
                 genre,
@@ -73,7 +75,7 @@ async function whatever(url, skipEmpdydata) {
 }
 
 // ポプとも比較対象の全ページに対し、データの取得を行う
-async function wapper(id, lv, skipEmpdydata) {
+async function wapper(id, lv) {
     let size = await getMaxLvPageNum(getTomoDiffUrl(id, lv, 0));
     if (size == -1) {
         showMessage("曲一覧ページの最大数取得時にエラーが発生しました", false, true);
@@ -82,7 +84,7 @@ async function wapper(id, lv, skipEmpdydata) {
     let pagelist = Array.from({ length: size }, (_, index) => index);
 
     const promises = pagelist.map(page =>
-        whatever(getTomoDiffUrl(id, lv, page), skipEmpdydata)
+        whatever(getTomoDiffUrl(id, lv, page))
     );
     return (await Promise.all(promises)).flat();
 }
@@ -101,9 +103,9 @@ function addScript(scriptId, scriptContent) {
     document.head.appendChild(script);
 }
 
-async function addDiffList(name, tomoname, data) {
+function addDiffList(name, tomoname) {
     const table = document.createElement('table');
-    table.id = 'compare-table';
+    table.id = PLACEHOLDER_ID.MUSIC_LIST;
     table.className = 'table table-striped table-bordered table-sm';
     
     // テーブルのヘッダーを作成
@@ -120,7 +122,9 @@ async function addDiffList(name, tomoname, data) {
     thead.appendChild(headerRow);
     table.appendChild(thead);
     document.body.appendChild(table);
+}
 
+function addDiffListScript(data) {
     // 表データ更新用スクリプトの出力
     let scriptInnerHTML = `
 var data = [
@@ -143,7 +147,10 @@ var data = [
     scriptInnerHTML += `
     ]
 $(document).ready(function() {
-    $('#compare-table').DataTable({
+    if ($.fn.DataTable.isDataTable('#${PLACEHOLDER_ID.MUSIC_LIST}')) {
+        $('#${PLACEHOLDER_ID.MUSIC_LIST}').DataTable().destroy();
+    }
+    $('#${PLACEHOLDER_ID.MUSIC_LIST}').DataTable({
         displayLength: 50,
         data: data,
         columns: [
@@ -200,7 +207,7 @@ function countResults(data) {
 }
 
 // スクリプト生成関数
-async function addGraphScript(data) {
+function addGraphScript(data) {
     // 勝ち負け数をカウントする
     const resultCounts = countResults(data);
 
@@ -256,7 +263,10 @@ async function addGraphScript(data) {
             })
         }
     }
-    var ctx = document.getElementById("rankinggraph");
+    if (myChart) {
+        myChart.destroy();
+    }
+    var ctx = document.getElementById("${PLACEHOLDER_ID.WIN_LOSE_GRAPH}");
     var myChart = new Chart(ctx, {
         type: 'pie',
         data: {
@@ -293,10 +303,10 @@ async function backButton(name, tomo) {
 /**
  * ポプとも比較用ページ
  */
-async function diffpage(name, id, tomo, lv, skipEmpdydata) {
+async function diffpage(name, id, tomo, lv) {
     cleanupHTML();
     showMessage("プレイデータの読み込み中・・・", true);
-    let data = await getStorageData(STORAGE_KEY.LV_DATA(id, lv), () => wapper(id, lv, skipEmpdydata));
+    let data = await getStorageData(STORAGE_KEY.LV_DATA(id, lv), () => wapper(id, lv));
     if (!data || data.length == 0 || !data[0]) {
         showMessage("曲一覧数取得時にエラーが発生しました", false, true);
         document.body.appendChild(await backButton(name, tomo));
@@ -315,29 +325,78 @@ async function diffpage(name, id, tomo, lv, skipEmpdydata) {
     let title = document.createElement('h2');
     title.innerText = `Lv${lv} ${name} vs ${tomo[id]["name"]}`;
     infocol.appendChild(title);
+
+    // オプション
+    let t = document.createElement('h2');
+    t.textContent = "オプション";
+    infocol.appendChild(t);
+    let optiondiv = document.createElement('div');
+    optiondiv.className = "toggle-area";
+    // 未プレイ曲スキップスイッチ
+    let skipEmptydataCheck = document.createElement('input');
+    skipEmptydataCheck.type = "checkbox";
+    skipEmptydataCheck.id = "skip-emptydata";
+    skipEmptydataCheck.checked = await getStorageData(STORAGE_KEY.SELECTED_SKIP_EMPTY, () => true);
+    // スキップスイッチの状態変化でコールバック
+    skipEmptydataCheck.addEventListener('change', async (event) => {
+        const isChecked = event.target.checked;
+        setStorageData(STORAGE_KEY.SELECTED_SKIP_EMPTY, isChecked);
+        await setPlaceholderData(data);
+    });
+    let selabel = document.createElement('label');
+    selabel.htmlFor = "skip-emptydata";
+    selabel.innerText = "どちらかが未プレイの曲は除外";
+    optiondiv.appendChild(skipEmptydataCheck);
+    optiondiv.appendChild(selabel);
+    infocol.appendChild(optiondiv);
+    infocol.appendChild(document.createElement('br'));
+
+    // 曲数表示 プレースホルダ
     let mcount = document.createElement('h2');
-    mcount.innerText = `曲一覧(${data.length}曲)`;
+    mcount.id = PLACEHOLDER_ID.MUSIC_COUNT;
     infocol.appendChild(mcount);
+
     baserow.appendChild(infocol);
-    // グラフ
+
+    // 対戦結果グラフ プレースホルダ
     let graphcol = document.createElement('div');
     graphcol.className = "col-7";
     graphcol.style = "position:relative; height:300px";
     let c = document.createElement('canvas');
-    c.id = "rankinggraph";
+    c.id = PLACEHOLDER_ID.WIN_LOSE_GRAPH;
     graphcol.appendChild(c);
     baserow.appendChild(graphcol);
 
     document.body.appendChild(baserow);
 
-    // 一覧表
-    addDiffList(name, tomo[id]["name"], data);
+    // 一覧表 プレースホルダ
+    addDiffList(name, tomo[id]["name"]);
     document.body.appendChild(document.createElement('br'));
-    // グラフ表示用スクリプト
-    addGraphScript(data);
 
     // 戻るボタン
     document.body.appendChild(await backButton(name, tomo));
+
+    // プレースホルダのデータをセットする
+    await setPlaceholderData(data);
+}
+
+/**
+ * 結果ページの画面にデータを反映する。オプションによって動的に変える
+ */
+async function setPlaceholderData(data){
+    let skipEmptydata = await getStorageData(STORAGE_KEY.SELECTED_SKIP_EMPTY, () => true);
+    let subdata = [];
+    data.forEach(d => {
+        if (skipEmptydata && (d["p1Score"] == 0 || d["p2Score"] == 0)) {
+            return;
+        }
+        subdata.push(d);
+    });
+
+    let mcount = document.getElementById(PLACEHOLDER_ID.MUSIC_COUNT);
+    mcount.innerText = `曲一覧(${subdata.length}曲)`;
+    addGraphScript(subdata);
+    addDiffListScript(subdata);
 }
 
 /**
@@ -389,32 +448,13 @@ async function main(name, tomo) {
     document.body.appendChild(selectLv);
     document.body.appendChild(document.createElement('br'));
 
-    // オプション
-    let t = document.createElement('h2');
-    t.textContent = "オプション";
-    document.body.appendChild(t);
-    let optiondiv = document.createElement('div');
-    optiondiv.className = "toggle-area";
-    // 未プレイ曲スキップスイッチ
-    let skipEmptydataCheck = document.createElement('input');
-    skipEmptydataCheck.type = "checkbox";
-    skipEmptydataCheck.id = "skip-emptydata";
-    skipEmptydataCheck.checked = true;
-    let selabel = document.createElement('label');
-    selabel.htmlFor = "skip-emptydata";
-    selabel.innerText = "どちらかが未プレイの曲は除外";
-    optiondiv.appendChild(skipEmptydataCheck);
-    optiondiv.appendChild(selabel);
-    document.body.appendChild(optiondiv);
-    document.body.appendChild(document.createElement('br'));
-
     // 比較実行
     let compareButton = document.createElement('button');
     compareButton.innerText = '比較実行';
     compareButton.onclick = async () => {
         setStorageData(STORAGE_KEY.SELECTED_LV, selectLv.value);
         setStorageData(STORAGE_KEY.SELECTED_TOMO_ID, selectTomo.value);
-        await diffpage(name, selectTomo.value, tomo, selectLv.value, skipEmptydataCheck.checked);
+        await diffpage(name, selectTomo.value, tomo, selectLv.value);
     };
     document.body.appendChild(compareButton);
     document.body.appendChild(document.createElement('br'));
