@@ -67,12 +67,14 @@ javascript: import("https://wanau-ynw.github.io/Bookmarklet/fullcomboList.js").t
 </details>
 
 ## ポプとも比較ツール
-説明書はまだ書けてません
+ポプともとスコア比較をするツールです。  
+Lvごとの一覧表を表示したり、スコアやメダルで一覧表を並び変えることができます。
 
 ### 使い方
 
 1. 以下の文字列(スクリプト)をブラウザのブックマークに追加する
 2. ポップンのサイトにログインして、1で追加したブックマークをクリックする
+3. ポプともの名前と比較するLvを指定する
 
 ```
 javascript: import("https://wanau-ynw.github.io/Bookmarklet/poptomo.js").then(m => m.default());

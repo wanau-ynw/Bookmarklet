@@ -4,6 +4,8 @@ const STORAGE_KEY = {
     SELECTED_LV: "selected_lv",
     SELECTED_TOMO_ID: "selected_tomo_id",
     SELECTED_SKIP_EMPTY: "skip_empty",
+    SELECTED_SKIP_WIN: "skip_win",
+    SELECTED_SKIP_LOSE: "skip_lose",
     LV_DATA: (id, lv) => `tomo_${id}_${lv}`,
 }
 const PLACEHOLDER_ID = {
@@ -336,13 +338,32 @@ function addGraphScript(resultCounts) {
     addScript("dynamic-graph", scriptInnerHTML);
 }
 
-async function backButton(name, tomo) {
-    let backButton = document.createElement('button');
-    backButton.innerText = '戻る';
-    backButton.onclick = async () => {
-        await main(name, tomo);
+async function makeButton(text, callback) {
+    let b = document.createElement('button');
+    b.innerText = text;
+    b.className = 'btn btn-primary mr-3';
+    b.onclick = async () => {
+        await Promise.resolve(callback());
     };
-    return backButton;
+    return b;
+}
+
+async function addOption(optiondiv, id, label, defo, storage, callback) {
+    let skipEmptydataCheck = document.createElement('input');
+    skipEmptydataCheck.type = "checkbox";
+    skipEmptydataCheck.id = id;
+    skipEmptydataCheck.checked = await getStorageData(storage, () => defo);
+    skipEmptydataCheck.addEventListener('change', async (event) => {
+        const isChecked = event.target.checked;
+        setStorageData(storage, isChecked);
+        await Promise.resolve(callback());
+    });
+    let selabel = document.createElement('label');
+    selabel.htmlFor = id;
+    selabel.innerText = label;
+    optiondiv.appendChild(skipEmptydataCheck);
+    optiondiv.appendChild(selabel);
+    optiondiv.appendChild(document.createElement('br'));
 }
 
 /**
@@ -354,14 +375,20 @@ async function diffpage(name, id, tomo, lv) {
     let data = await getStorageData(STORAGE_KEY.LV_DATA(id, lv), () => wapper(id, lv));
     if (!data || data.length == 0 || !data[0]) {
         showMessage("曲一覧数取得時にエラーが発生しました", false, true);
-        document.body.appendChild(await backButton(name, tomo));
+        document.body.appendChild(await makeButton('戻る', () => main(name, tomo)));
         return;
     }
 
     cleanupHTML();
     let tomoname = tomo[id]["name"];
-    // 戻るボタン
-    document.body.appendChild(await backButton(name, tomo));
+    // 移動ボタン
+    if (lv >= 2) {
+        document.body.appendChild(await makeButton('Lv' + (lv - 1) + ' <<', () => diffpage(name, id, tomo, lv - 1)));
+    }
+    document.body.appendChild(await makeButton('戻る', () => main(name, tomo)));
+    if (lv <= 49) {
+        document.body.appendChild(await makeButton('>> Lv' + (lv + 1), () => diffpage(name, id, tomo, lv + 1)));
+    }
     // 基礎情報とグラフを表示する列
     let baserow = document.createElement('div');
     baserow.className = "row";
@@ -386,22 +413,9 @@ async function diffpage(name, id, tomo, lv) {
     infocol.appendChild(t);
     let optiondiv = document.createElement('div');
     optiondiv.className = "toggle-area";
-    // 未プレイ曲スキップスイッチ
-    let skipEmptydataCheck = document.createElement('input');
-    skipEmptydataCheck.type = "checkbox";
-    skipEmptydataCheck.id = "skip-emptydata";
-    skipEmptydataCheck.checked = await getStorageData(STORAGE_KEY.SELECTED_SKIP_EMPTY, () => true);
-    // スキップスイッチの状態変化でコールバック
-    skipEmptydataCheck.addEventListener('change', async (event) => {
-        const isChecked = event.target.checked;
-        setStorageData(STORAGE_KEY.SELECTED_SKIP_EMPTY, isChecked);
-        await setPlaceholderData(data, name, tomoname);
-    });
-    let selabel = document.createElement('label');
-    selabel.htmlFor = "skip-emptydata";
-    selabel.innerText = "どちらかが未プレイの曲は除外";
-    optiondiv.appendChild(skipEmptydataCheck);
-    optiondiv.appendChild(selabel);
+    await addOption(optiondiv, "skip-emptydata", "どちらかが未プレイの曲は除く", true, STORAGE_KEY.SELECTED_SKIP_EMPTY, () => setPlaceholderData(data, name, tomoname));
+    await addOption(optiondiv, "skip-win", "勝っている曲は除く", false, STORAGE_KEY.SELECTED_SKIP_WIN, () => setPlaceholderData(data, name, tomoname));
+    await addOption(optiondiv, "skip-lose", "負けている曲は除く", false, STORAGE_KEY.SELECTED_SKIP_LOSE, () => setPlaceholderData(data, name, tomoname));
     infocol.appendChild(optiondiv);
     infocol.appendChild(document.createElement('br'));
 
@@ -428,7 +442,7 @@ async function diffpage(name, id, tomo, lv) {
     document.body.appendChild(document.createElement('br'));
 
     // 戻るボタン
-    document.body.appendChild(await backButton(name, tomo));
+    document.body.appendChild(await makeButton('戻る', () => main(name, tomo)));
 
     // プレースホルダのデータをセットする
     await setPlaceholderData(data, name, tomoname);
@@ -439,9 +453,17 @@ async function diffpage(name, id, tomo, lv) {
  */
 async function setPlaceholderData(data, name, tomoname){
     let skipEmptydata = await getStorageData(STORAGE_KEY.SELECTED_SKIP_EMPTY, () => true);
+    let skipWin = await getStorageData(STORAGE_KEY.SELECTED_SKIP_WIN, () => false);
+    let skipLose = await getStorageData(STORAGE_KEY.SELECTED_SKIP_LOSE, () => false);
     let subdata = [];
     data.forEach(d => {
         if (skipEmptydata && (d["p1Score"] == 0 || d["p2Score"] == 0)) {
+            return;
+        }
+        if (skipWin && (d["p1Score"] > d["p2Score"])) {
+            return;
+        }
+        if (skipLose && (d["p1Score"] < d["p2Score"])) {
             return;
         }
         subdata.push(d);
@@ -520,10 +542,11 @@ async function main(name, tomo) {
     // 比較実行
     let compareButton = document.createElement('button');
     compareButton.innerText = '比較実行';
+    compareButton.className = 'btn btn-primary';
     compareButton.onclick = async () => {
-        setStorageData(STORAGE_KEY.SELECTED_LV, selectLv.value);
+        setStorageData(STORAGE_KEY.SELECTED_LV, parseInt(selectLv.value));
         setStorageData(STORAGE_KEY.SELECTED_TOMO_ID, selectTomo.value);
-        await diffpage(name, selectTomo.value, tomo, selectLv.value);
+        await diffpage(name, selectTomo.value, tomo, parseInt(selectLv.value));
     };
     document.body.appendChild(compareButton);
     document.body.appendChild(document.createElement('br'));
