@@ -113,7 +113,7 @@ function addDiffList(name, tomoname) {
     // テーブルのヘッダーを作成
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
-    const headers = ['順位', 'ジャンル名', '曲名', name, tomoname, 'スコア差'];
+    const headers = ['順位', 'ジャンル名', '曲名', name, 'メダル', tomoname, 'メダル', 'スコア差'];
     
     headers.forEach(headerText => {
         const th = document.createElement('th');
@@ -124,6 +124,29 @@ function addDiffList(name, tomoname) {
     thead.appendChild(headerRow);
     table.appendChild(thead);
     document.body.appendChild(table);
+}
+
+function medalTotext(d, player) {
+    if (player == 1){
+        return String(d["p1rank"]).padStart(2, '0') + String(d["p1medal"]).padStart(2, '0');
+    }else{
+        return String(d["p2rank"]).padStart(2, '0') + String(d["p2medal"]).padStart(2, '0');
+    }
+}
+
+function medalToImg(d, player) {
+    if (player == 1){
+        if(isErrorMedalID(d["p1medal"]) || isErrorMedalID(d["p1rank"])){
+            return "";
+        }
+        return `<img src="${GITHUB_URL}/icon/s_${d["p1rank"]}.png" height="32px"><img src="${GITHUB_URL}/c_icon/c_${d["p1medal"]}.png" height="32px"></img>`
+    }else{
+        if(isErrorMedalID(d["p2medal"]) || isErrorMedalID(d["p2rank"])){
+            return "";
+        }
+        return `<img src="${GITHUB_URL}/icon/s_${d["p2rank"]}.png" height="32px"><img src="${GITHUB_URL}/c_icon/c_${d["p2medal"]}.png" height="32px"></img>`
+    }
+
 }
 
 function addDiffListScript(data) {
@@ -141,7 +164,9 @@ var data = [
             "genre": '${d["genre"].replace(/'/g, "\\'").replace(/"/g, '\\"')}',
             "title": '${d["title"].replace(/'/g, "\\'").replace(/"/g, '\\"')}',
             "score": '${d["p1Score"]}',
+            "mymedal": '<div hidden>${medalTotext(d,1)}</div>${medalToImg(d,1)}',
             "targetscore": '${d["p2Score"]}',
+            "targetmedal": '<div hidden>${medalTotext(d,2)}</div>${medalToImg(d,2)}',
             "targetdiff": '${diff}'
         }${index < dataLength - 1 ? ',' : ''} 
     `;
@@ -160,11 +185,14 @@ $(document).ready(function() {
             { data: "genre" },
             { data: "title" },
             { data: "score" },
+            { data: "mymedal" },
             { data: "targetscore" },
+            { data: "targetmedal" },
             { data: "targetdiff" }
         ],
         "columnDefs": [
-            { className: "text-right", targets: [0,3,4,5] }
+            { className: "text-right", targets: [0,3,5,7] },
+            { width: '78px', targets: [4,6] }
         ]
     });
 });
