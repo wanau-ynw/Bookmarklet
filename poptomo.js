@@ -1,5 +1,4 @@
-// const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
-const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
+const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
 const STORAGE_KEY = {
     SELECTED_LV: "selected_lv",
     SELECTED_TOMO_ID: "selected_tomo_id",
