@@ -54,10 +54,10 @@ async function whatever(url) {
             const genre = cells[0].querySelector('br').nextSibling.nodeValue.trim(); // ジャンル
 
             // プレイヤーの成績を取得
-            const p1Score = cells[1].innerText.trim();
+            const p1Score = parseInt(cells[1].innerText.trim());
             const p1medal = medalurlToInt(cells[1].firstChild.src);
             const p1rank = rankurlToInt(cells[1].children[1].src);
-            const p2Score = cells[2].innerText.trim();
+            const p2Score = parseInt(cells[2].innerText.trim());
             const p2medal = medalurlToInt(cells[2].firstChild.src);
             const p2rank = rankurlToInt(cells[2].children[1].src);
 
@@ -222,11 +222,11 @@ function countResults(data) {
         let s1 = d["p1Score"];
         let s2 = d["p2Score"];
         if (s1 > 0) { 
-            p1ScoreTotal += parseInt(s1); 
+            p1ScoreTotal += s1; 
             p1ScoreCount++; 
         }
         if (s2 > 0) { 
-            p2ScoreTotal += parseInt(s2); 
+            p2ScoreTotal += s2; 
             p2ScoreCount++; 
         }
         if (s1 == 0 && s2 == 0) { allskip++; return; }
