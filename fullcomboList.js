@@ -211,7 +211,7 @@ async function appendImgDLbtn(img, lv, mode, id) {
 // hasscorerank : メダル情報にクリアランクを重ねて表示するか (TODO: 関数間を持ちまわっているが、もっといい方法がありそう。)
 async function main(lv, mode, hasscorerank) {
   showMessage("プレイデータの読み込み中・・・", true);
-  let data = await getStorageData(STORAGE_KEY.LV_DATA(lv), () => wapper(lv));
+  let data = await getSessionStorage(STORAGE_KEY.LV_DATA(lv), () => wapper(lv));
   if (!data || data.length == 0 || !data[0]) {
     showMessage(
       "プレイデータの読み取りに失敗しました。<br>" + 
@@ -344,6 +344,7 @@ export default async (lv, mode=1, hasscorerank=false) => {
   document.head.innerHTML = "";
   document.body.innerHTML = "";
   await loadScript(GITHUB_URL + "/js/logger.js");
+  await loadScript(GITHUB_URL + "/js/storage.js");
   await loadScript(GITHUB_URL + "/js/webtool.js");
   await loadCSS(GITHUB_URL + "/css/normalize.css");
   await loadCSS(GITHUB_URL + "/css/style.css");
