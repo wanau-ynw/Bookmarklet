@@ -51,7 +51,7 @@ async function whatever(url) {
     .filter((li) => li.firstElementChild.className === "col_music_lv")  // 曲データだけ抽出
     .map((li) => [
       songtrim(li.children[0].firstElementChild.textContent),
-      li.children[3].textContent.trim(),
+      parseInt(li.children[3].textContent.trim()),
       medalurlToInt(li.children[3].firstChild.src),
       li.children[3].children.length >= 2 ? rankurlToInt(li.children[3].children[1].src) : getErrorMedalID(),
     ])
@@ -291,6 +291,191 @@ async function main(lv, mode) {
   if(c1)document.body.appendChild(c1);
 }
 
+// 個人プレイデータから統計情報を計算する
+function calcPersonalData(data) {
+  let lvSongCount = {};
+  let lvPlayCount = {};
+  let lvScoreSum = {};
+  let lvScoreAve = {};
+  let lvMedalCount = {};
+  let lvRankCount = {};
+
+  data.forEach(lvdata => {
+    let lv = lvdata.lv;
+    lvSongCount[lv] = lvdata.data.length;
+    lvPlayCount[lv] = 0;
+    lvScoreSum[lv] = 0;
+    lvMedalCount[lv] = Array(11+1).fill(0);
+    lvRankCount[lv] = Array(8+1).fill(0);
+
+    lvdata.data.forEach(d => {
+      // 未プレイ曲スキップ
+      if(d.score === 0){
+        return;
+      }
+      lvPlayCount[lv] ++;
+      lvScoreSum[lv] += d.score;
+      lvMedalCount[lv][d.medal] ++;
+      lvRankCount[lv][d.rank] ++;
+    });
+    lvScoreAve[lv] = (lvPlayCount[lv] > 0 ? (lvScoreSum[lv] / lvPlayCount[lv]) : 0);
+
+  });
+  return {
+    lvSongCount,
+    lvPlayCount,
+    lvScoreAve,
+    lvMedalCount,
+    lvRankCount,
+  };
+}
+
+function makeTd(txt) {
+  const td = document.createElement("td");
+  td.textContent = txt;
+  return td;
+}
+
+// メダル数テーブルを作成する
+// テーブルヘッダにはメダル画像を利用するので、そのベースとなるURLを引数に与える
+function createDataTable(title, idbase, headbase, data, colLen, songcount){
+  // ボタンで表示切り替えする対象
+  const hideitemsdiv = document.createElement("div");
+  hideitemsdiv.id = idbase + "-table";
+  hideitemsdiv.className = "collapse hideitems";
+
+  let t = document.createElement('h2');
+  t.textContent = title;
+  hideitemsdiv.appendChild(t);
+
+  const table = document.createElement("table");
+  table.className ="table medal-table table-striped table-bordered table-sm col-md-8 col-sm-12";
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  const headers = [""];
+  for (let i = colLen; i > 0; i--) {
+    headers.push(`<img src="${headbase}${i}.png" height="32px" _pageexpand_="32"></img>`);
+  } 
+  headers.push("合計");
+  headers.push("メダルなし");
+
+  headers.forEach(headerText => {
+    const th = document.createElement("th");
+    th.innerHTML = headerText;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  // 各列の合計を保持する配列
+  const columnTotals = new Array(colLen).fill(0);
+  let grandTotal = 0; // 全体の合計
+  let nomedalTotal = 0; // メダルがない曲の合計
+
+  for (const key in data) {
+    if (data.hasOwnProperty(key)) {
+      const row = document.createElement("tr");
+      let rowtotal = 0;
+
+      // 最初のセルはキーの値(Lv)
+      row.appendChild(makeTd(`Lv${key}`));
+
+      // 値の配列をループしてセルを追加(最初のデータはエラーメダルデータ数なのでスキップする)
+      data[key].slice(1).reverse().forEach((value, index) => {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        if(value === 0){
+          cell.style = "color:#999999"  // 値が0のセルはグレーにして目立たせなくする
+        }
+        rowtotal += value;
+        columnTotals[index] += value;
+        row.appendChild(cell);
+      });
+      // カラム合計を表示
+      row.appendChild(makeTd(rowtotal));
+      // メダルがない曲数
+      row.appendChild(makeTd(songcount[key] - rowtotal));
+      nomedalTotal += songcount[key] - rowtotal;
+
+      tbody.appendChild(row);
+      grandTotal += rowtotal;
+    }
+  }
+  // 最後に、合計行を追加
+  const totalRow = document.createElement("tr");
+  totalRow.appendChild(makeTd("合計"));
+
+  // 各列の合計をセルに追加
+  columnTotals.forEach(columnTotal => {
+    totalRow.appendChild(makeTd(columnTotal));
+  });
+  totalRow.appendChild(makeTd(grandTotal));
+  totalRow.appendChild(makeTd(nomedalTotal));
+
+  tbody.appendChild(totalRow);
+  table.appendChild(tbody);
+  hideitemsdiv.appendChild(table);
+  document.body.appendChild(hideitemsdiv);
+  document.body.appendChild(document.createElement('br'));
+}
+
+// スコアテーブルを作成する
+function createScoreTable(scores, plays){
+  // ボタンで表示切り替えする対象
+  const hideitemsdiv = document.createElement("div");
+  hideitemsdiv.id = "score-table";
+  hideitemsdiv.className = "collapse hideitems";
+
+  let t = document.createElement('h2');
+  t.textContent = "平均スコア";
+  hideitemsdiv.appendChild(t);
+
+  const table = document.createElement("table");
+  table.className ="table score-table table-striped table-bordered table-sm col-md-5";
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  const headers = ["", "平均スコア", "対象曲数"];
+
+  headers.forEach(headerText => {
+    const th = document.createElement("th");
+    th.innerHTML = headerText;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  let grandTotal = 0; // 全体の合計
+  let totalDivNum = 0;
+
+  for (const key in scores) {
+    if (scores.hasOwnProperty(key)) {
+      const row = document.createElement("tr");
+
+      row.appendChild(makeTd(`Lv${key}`));
+      row.appendChild(makeTd(scores[key].toFixed(1)));
+      row.appendChild(makeTd(plays[key]));
+
+      tbody.appendChild(row);
+      grandTotal += scores[key] * plays[key];
+      totalDivNum += plays[key];
+    }
+  }
+  // 最後に、合計行を追加
+  const totalRow = document.createElement("tr");
+  totalRow.appendChild(makeTd("全体"));
+  totalRow.appendChild(makeTd((grandTotal/totalDivNum).toFixed(1)));
+  totalRow.appendChild(makeTd(totalDivNum));
+
+  tbody.appendChild(totalRow);
+  table.appendChild(tbody);
+
+  hideitemsdiv.appendChild(table);
+  document.body.appendChild(hideitemsdiv);
+  document.body.appendChild(document.createElement('br'));
+}
+
 // 個人情報表ページ
 async function personal_datapage() {
   showMessage("プレイデータの読み込み中・・・", true);
@@ -301,21 +486,37 @@ async function personal_datapage() {
       "公式サイトにアクセスして、データが参照できるか確認してください。", false, true);
     return;
   }
-  showMessage("画像素材の読み込み中・・・", true);
-  let icon = await loadMedals(GITHUB_URL, false);
-  let scoreicon = await loadRankMedals(GITHUB_URL);
+  let calcdata = calcPersonalData(data);
 
-  showMessage("画像作成処理開始", true);
   cleanupHTML();
 
   // 一覧に戻るボタン
   let b = document.createElement('button');
+  b.className = "btn btn-primary mr-4";
   b.textContent = "一覧に戻る";
   b.addEventListener('click', async () => { await allpage() });
   document.body.appendChild(b);
 
-  // メダル取得表と各種グラフ・一覧表
-  // TODO
+  // 表を隠すボタン
+  let hidebtn = document.createElement('button');
+  hidebtn.className = "btn btn-primary mr-4";
+  hidebtn.setAttribute("data-toggle", "collapse");
+  hidebtn.setAttribute("data-target", ".hideitems");
+  hidebtn.setAttribute("aria-expanded", "false");
+  hidebtn.setAttribute("aria-controls", "medal-table rank-table score-table");
+  hidebtn.innerText = "詳細を見る/隠す";
+  document.body.appendChild(hidebtn);
+
+  document.body.appendChild(document.createElement('br'));
+
+  // メダル取得表
+  createDataTable("クリアメダル一覧", "medal", `${GITHUB_URL}/c_icon/c_`, calcdata.lvMedalCount, 11, calcdata.lvSongCount);
+  createDataTable("クリアランク一覧", "rank", `${GITHUB_URL}/c_icon/s_`, calcdata.lvRankCount, 8, calcdata.lvSongCount);
+  // 平均スコア表
+  createScoreTable(calcdata.lvScoreAve, calcdata.lvPlayCount);
+  // TODO : Lvごと分布グラフ / 数ベースと、割合ベース
+  // TODO : 曲一覧表 メダル表やグラフをクリックすると、その条件でフィルタリングされた曲一覧に更新されて、その表示位置にジャンプ
+  // TODO : データ更新ボタン
 }
 
 // 現在表示できるリストの一覧を表示して選択してもらうためのページ部品。
@@ -435,16 +636,27 @@ async function allpage() {
 // mode 1 = フルコン難易度 (デフォルト)
 // mode 2 = クリア難易度
 export default async (lv, mode=1) => {
-  // セッションストレージを初期化
-  sessionStorage.clear();
   // 初回アクセス時のみ、ヘッダに必要情報を取り込む
   document.head.innerHTML = "";
-  document.body.innerHTML = "";
+  document.body.innerHTML = "初期化中・・・";
+  // セッションストレージを初期化
+  sessionStorage.clear();
+  // js/cssの取り込み
+  await loadScript(GITHUB_URL + "/js/jquery-3.3.1.slim.min.js"); // 注意: 読み込む順番を変えてはいけない
+  await loadScript(GITHUB_URL + "/js/popper.min.js");
+  await loadScript(GITHUB_URL + "/js/bootstrap.min.js");
+  await loadScript(GITHUB_URL + "/js/jquery.dataTables.min.js");
+  await loadScript(GITHUB_URL + "/js/dataTables.bootstrap4.min.js");
+  await loadScript(GITHUB_URL + "/js/Chart.bundle.min.js");
   await loadScript(GITHUB_URL + "/js/logger.js");
   await loadScript(GITHUB_URL + "/js/storage.js");
   await loadScript(GITHUB_URL + "/js/webtool.js");
+
   await loadCSS(GITHUB_URL + "/css/normalize.css");
+  await loadCSS(GITHUB_URL + "/css/bootstrap.min.css");
+  await loadCSS(GITHUB_URL + "/css/dataTables.bootstrap4.min.css");
   await loadCSS(GITHUB_URL + "/css/style.css");
+
   // メダルカウント表示用フォント
   await loadCSS("https://fonts.googleapis.com/css2?family=Varela+Round&display=swap");
   

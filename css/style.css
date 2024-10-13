@@ -19,6 +19,24 @@ h2 {
     color: red;
 }
 
+table.medal-table thead th,
+table.score-table thead th {
+    text-align: center;
+}
+table.medal-table tbody td,
+table.score-table tbody td {
+    text-align: right;
+}
+table.medal-table tbody tr:last-child,
+table.score-table tbody tr:last-child {
+    font-weight: bold;
+}
+table.medal-table tbody td:first-child,
+table.score-table tbody td:first-child,
+table.medal-table tbody td:nth-last-child(-n+2) {
+    font-weight: bold;
+}
+
 .button-container {
     display: flex;
 }
