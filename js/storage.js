@@ -1,3 +1,9 @@
+/**
+ * ローカルストレージの管理用バージョン。
+ * このバージョンと、保存されているデータのバージョンが異なる場合は古い形式なので、
+ * 必要に応じてデータを再取得する
+ */
+const STORAGE_VER = 1
 
 /**
  * セッションストレージのデータを取得または新規作成して保存する
@@ -30,12 +36,12 @@ function setSessionStorage(key, data) {
  * - 前回保存から１週間以上経過している
  * - バージョンが変わっている
  */
-async function getLocalStorage(key, createDataFunc, ver) {
+async function getLocalStorage(key, createDataFunc) {
     let data = localStorage.getItem(key);
     if (data) {
         // データがあった場合、期限やバージョンの条件をチェック
         data = JSON.parse(data);
-        if (!('version' in data) || (data.version != ver)) {
+        if (!('version' in data) || (data.version != STORAGE_VER)) {
             console.log("localStorage version mismatch");
             data = null;
         } else if (!('timestamp' in data)) {
@@ -57,13 +63,13 @@ async function getLocalStorage(key, createDataFunc, ver) {
     if (data === null) {
         // データがなければ、新規作成して登録
         data = await Promise.resolve(createDataFunc()); // 同期関数・非同期関数どちらが渡されてもいいように。
-        setLocalStorage(key, data, ver);
+        setLocalStorage(key, data);
     }
     return data;
 }
 
-function setLocalStorage(key, data, ver) {
-    let obj = { value: data, timestamp: new Date().getTime(), version: ver }
+function setLocalStorage(key, data) {
+    let obj = { value: data, timestamp: new Date().getTime(), version: STORAGE_VER }
     obj = JSON.stringify(obj);
     localStorage.setItem(key, obj);
     console.log("save localStorage : " + key + " : about " + obj.length + "byte");

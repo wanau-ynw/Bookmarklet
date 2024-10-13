@@ -4,6 +4,7 @@ const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
 
 const STORAGE_KEY = {
     LV_DATA: (lv) => `mydata_${lv}`,
+    PERSONAL_DATA: "personal_data",
 }
 
 
@@ -82,6 +83,42 @@ async function wapper(lv) {
         break
       }
     }
+  }
+  return s
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// 個人データ参照のため、特定のレベル範囲の曲をすべて取得する。
+// 公式サイト負荷軽減のため、並列処理は行わずにゆっくり取得
+async function wapper_personal() {
+  await showMessage("注意：");
+  await showMessage("公式サイトに負荷をかけないように、データ取得速度に制限をかけています");
+  await showMessage("すべてのデータを取得するのに２分くらいかかるので、ゆっくりお待ちください");
+  await showMessage("※取得したデータはデバイス上に保管するので、今後のアクセスはここまで時間かかりません");
+  const s = [];
+  for (let lv = 40; lv <= 50; lv++) {
+    await showMessage(`Lv${lv} データ取得開始`);
+    const size = await getMaxLvPageNum(`${PLAY_DATA_URL}?page=0&lv=${lv}`);
+    if (size == -1) {
+      await showMessage("曲一覧ページの最大数取得時にエラーが発生しました", false, true);
+      return null;
+    }
+
+    let pagelist = Array.from({ length: size }, (_, i) => [i, lv]);
+    let results = [];
+    await showMessage(`Lv${lv} 0/${size}`);
+    for (let [page, level] of pagelist) {
+      const result = await whatever(`${PLAY_DATA_URL}?page=${page}&lv=${level}`);
+      results.push(...result); // 配列の要素を展開してpush
+      await replaceLastMessage(`Lv${lv} ${page+1}/${size}`);
+      await sleep(1000);
+    }
+    s.push({lv: lv, data: results});
+    await deleteLastMessage();
+    await replaceLastMessage(`Lv${lv} データ取得完了`);
   }
   return s
 }
@@ -254,6 +291,33 @@ async function main(lv, mode, hasscorerank) {
   if(c1)document.body.appendChild(c1);
 }
 
+// 個人情報表ページ
+async function personal_datapage() {
+  showMessage("プレイデータの読み込み中・・・", true);
+  let data = await getLocalStorage(STORAGE_KEY.PERSONAL_DATA, () => wapper_personal());
+  if (!data || data.length == 0 || !data[0]) {
+    showMessage(
+      "プレイデータの読み取りに失敗しました。<br>" + 
+      "公式サイトにアクセスして、データが参照できるか確認してください。", false, true);
+    return;
+  }
+  showMessage("画像素材の読み込み中・・・", true);
+  let icon = await loadMedals(GITHUB_URL, false);
+  let scoreicon = await loadRankMedals(GITHUB_URL);
+
+  showMessage("画像作成処理開始", true);
+  cleanupHTML();
+
+  // 一覧に戻るボタン
+  let b = document.createElement('button');
+  b.textContent = "一覧に戻る";
+  b.addEventListener('click', async () => { await allpage(false) });      // TODO: hasscore rankをlocalstorageにして、引数から外す
+  document.body.appendChild(b);
+
+  // メダル取得表と各種グラフ・一覧表
+  // TODO
+}
+
 // 現在表示できるリストの一覧を表示して選択してもらうためのページ部品。
 // 動作モードやタイトルを指定することで、フルコン用とクリア用の処理を共通化
 async function allpage_sub(mode, title, minlv, maxlv) {
@@ -285,6 +349,32 @@ async function allpage_sub(mode, title, minlv, maxlv) {
   }
   document.body.appendChild(maindiv);
   document.body.appendChild(document.createElement('br'));
+  document.body.appendChild(document.createElement('br'));
+}
+
+// 個人統計情報ページへの遷移ボタンを画面に追加
+async function allpage_sub_personal() {
+  // タイトル
+  let t = document.createElement('h2');
+  t.textContent = "個人データ参照";
+  document.body.appendChild(t);
+  // 遷移用ボタン
+  let maindiv = document.createElement('div');
+  maindiv.className = "button-container";
+  let subdiv = document.createElement('div');
+  let b = document.createElement('button');
+  b.textContent = "Lv40～50 統計";
+  b.addEventListener('click', async () => {
+    await personal_datapage();
+  });
+  // 注意事項
+  let p = document.createElement('p');
+  p.textContent = "注意: 初回はデータ読み込みに時間がかかります"
+  // 各要素を画面に追加
+  subdiv.appendChild(b);
+  subdiv.appendChild(p);
+  maindiv.appendChild(subdiv);
+  document.body.appendChild(maindiv);
   document.body.appendChild(document.createElement('br'));
 }
 
@@ -320,6 +410,10 @@ async function allpage(hasscorerank) {
   optiondiv.appendChild(srankcheck);
   optiondiv.appendChild(sranklabel);
   document.body.appendChild(optiondiv);
+  document.body.appendChild(document.createElement('br'));
+
+  // 個人情報ページ
+  allpage_sub_personal();
 
   // フッター
   document.body.appendChild(document.createElement('br'));
