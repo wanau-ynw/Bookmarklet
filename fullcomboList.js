@@ -5,6 +5,7 @@ const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
 const STORAGE_KEY = {
     LV_DATA: (lv) => `mydata_${lv}`,
     PERSONAL_DATA: "personal_data",
+    HAS_SCORE_RANK: "has_score_rank",
 }
 
 
@@ -246,8 +247,7 @@ async function appendImgDLbtn(img, lv, mode, id) {
 }
 
 // メイン処理。レベルと動作モードを指定して一覧表を出力する
-// hasscorerank : メダル情報にクリアランクを重ねて表示するか (TODO: 関数間を持ちまわっているが、もっといい方法がありそう。)
-async function main(lv, mode, hasscorerank) {
+async function main(lv, mode) {
   showMessage("プレイデータの読み込み中・・・", true);
   let data = await getSessionStorage(STORAGE_KEY.LV_DATA(lv), () => wapper(lv));
   if (!data || data.length == 0 || !data[0]) {
@@ -259,7 +259,7 @@ async function main(lv, mode, hasscorerank) {
   showMessage("画像素材の読み込み中・・・", true);
   let icon = await loadMedals(GITHUB_URL, mode == M_FULLCOMBO); // フルコンボ表の時はメダル画像に縁取りを付ける
   let scoreicon = null;
-  if(hasscorerank){
+  if (await getSessionStorage(STORAGE_KEY.HAS_SCORE_RANK, () => false)) {
     scoreicon =  await loadRankMedals(GITHUB_URL);
   }
   showMessage("画像作成処理開始", true);
@@ -267,7 +267,7 @@ async function main(lv, mode, hasscorerank) {
   // 一覧に戻るボタン
   let b = document.createElement('button');
   b.textContent = "一覧に戻る";
-  b.addEventListener('click', async () => { await allpage(hasscorerank) });
+  b.addEventListener('click', async () => { await allpage() });
 
   // 一覧表作成
   let c1 = null;
@@ -311,7 +311,7 @@ async function personal_datapage() {
   // 一覧に戻るボタン
   let b = document.createElement('button');
   b.textContent = "一覧に戻る";
-  b.addEventListener('click', async () => { await allpage(false) });      // TODO: hasscore rankをlocalstorageにして、引数から外す
+  b.addEventListener('click', async () => { await allpage() });
   document.body.appendChild(b);
 
   // メダル取得表と各種グラフ・一覧表
@@ -336,8 +336,7 @@ async function allpage_sub(mode, title, minlv, maxlv) {
     let b = document.createElement('button');
     b.textContent = "Lv" + i;
     b.addEventListener('click', async ()=> {
-      const elements = document.getElementsByName("drawscorerank");
-      await main(i, mode, (elements.length == 1 && elements[0].checked));
+      await main(i, mode);
     });
     // ボタン更新日 (仮)
     // let p = document.createElement('p');
@@ -379,7 +378,7 @@ async function allpage_sub_personal() {
 }
 
 // 現在表示できるリストの一覧を表示して選択してもらうためのページ
-async function allpage(hasscorerank) {
+async function allpage() {
   cleanupHTML();
   // タイトルロゴ
   let logo = document.createElement('img');
@@ -403,7 +402,10 @@ async function allpage(hasscorerank) {
   srankcheck.type = "checkbox";
   srankcheck.id = "iddrawscorerank";
   srankcheck.name = "drawscorerank";
-  srankcheck.checked = hasscorerank;
+  srankcheck.checked = await getSessionStorage(STORAGE_KEY.HAS_SCORE_RANK, () => false);
+  srankcheck.addEventListener('change', async (event) => {
+    setSessionStorage(STORAGE_KEY.HAS_SCORE_RANK, event.target.checked);
+  });
   let sranklabel = document.createElement('label');
   sranklabel.htmlFor = "iddrawscorerank";
   sranklabel.innerText = "クリアランク表示";
@@ -432,7 +434,7 @@ async function allpage(hasscorerank) {
 // mode 0 = 機能一覧表示
 // mode 1 = フルコン難易度 (デフォルト)
 // mode 2 = クリア難易度
-export default async (lv, mode=1, hasscorerank=false) => {
+export default async (lv, mode=1) => {
   // セッションストレージを初期化
   sessionStorage.clear();
   // 初回アクセス時のみ、ヘッダに必要情報を取り込む
@@ -447,8 +449,8 @@ export default async (lv, mode=1, hasscorerank=false) => {
   await loadCSS("https://fonts.googleapis.com/css2?family=Varela+Round&display=swap");
   
   if (mode == M_ALL){
-    allpage(hasscorerank);
+    allpage();
   }else{
-    main(lv, mode, hasscorerank);
+    main(lv, mode);
   }
 };
