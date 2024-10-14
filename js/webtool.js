@@ -113,6 +113,20 @@ async function loadCSS(href) {
   });
 }
 
+// ページにスクリプトを追加する。すでにある場合は削除して作り直す
+function addScript(scriptId, scriptContent) {
+    const scriptElement = document.getElementById(scriptId);
+    if (scriptElement) {
+        scriptElement.parentNode.removeChild(scriptElement);
+    }
+
+    const script = document.createElement('script');
+    script.type = "text/javascript";
+    script.id = scriptId;
+    script.innerHTML = scriptContent;
+    document.head.appendChild(script);
+}
+
 /**
  * 画像ファイルを読み込んで返す
  */

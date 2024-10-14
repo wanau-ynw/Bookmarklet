@@ -6,6 +6,7 @@ const STORAGE_KEY = {
     LV_DATA: (lv) => `mydata_${lv}`,
     PERSONAL_DATA: "personal_data",
     HAS_SCORE_RANK: "has_score_rank",
+    GRAPH_MODE_PERCENT: "graph_mode_percent",
 }
 
 
@@ -330,6 +331,129 @@ function calcPersonalData(data) {
   };
 }
 
+// メダル一覧グラフ描画用のキャンバスをHTMLに追加する
+function appendGraphBase(title, id) {
+  let t = document.createElement('h2');
+  t.textContent = title;
+  document.body.appendChild(t);
+
+  let c = document.createElement('canvas');
+  c.id = `${id}graph`;
+  c.width = 640;
+  c.height = 400;
+  c.style = "width:640; height:400;";
+  document.body.appendChild(c);
+}
+
+// グラフの再描画
+async function refreshGraphImage(target, calcdata) {
+  let labels = ["黒●", "黒◆", "黒★", "緑●", "銅●", "銅◆", "銅★", "銀〇", "銀◇", "銀☆", "金☆"];
+  let colors = ["#000000", "#202020", "#404040", "#00a000", "#6E2A13", "#8E4A33", "#aE6A53", "#808080", "#a0a0a0", "#c0c0c0", "#c0c000"];
+  let data = calcdata.lvMedalCount;
+  if (target === "rank") {
+    labels = ["E", "D", "C", "B", "A", "AA", "AAA", "S"];
+    colors = ["#71588f", "#4198af", "#89a54e", "#db843d", "#f8b1df", "#ef637e", "#da163e", "#c0c000"];
+    data = calcdata.lvRankCount;
+  }
+  let percentMode = await getSessionStorage(STORAGE_KEY.GRAPH_MODE_PERCENT, () => false);
+
+  // スクリプトの追加
+  let scriptInnerHTML = `
+    option = {
+        scales: {
+            xAxes: [{
+                stacked: true,
+                categoryPercentage:1.2
+            }],
+            yAxes: [{
+                id: "medalY",
+                position: "right",
+                stacked: true,
+                ${ percentMode ? "ticks: {min: 0, max: 100}," : "" }
+            },
+            {
+                id: "scoreY",
+                position: "left",
+            }]
+        },
+        responsive: false,
+        maintainAspectRatio: false,
+        legend: {
+            labels: {
+                boxWidth:30,
+                padding:20
+            },
+            display: true
+        },
+        tooltips:{
+            mode:'label',
+            itemSort: function(a, b) { return b.datasetIndex - a.datasetIndex},
+            ${ percentMode ? `callbacks: {
+                label: function(tooltipItem, data) {
+                    const dataset = data.datasets[tooltipItem.datasetIndex];
+                    if(dataset.label === 'score'){return dataset.label + ': ' + dataset.data[tooltipItem.index];}
+                    return dataset.label + ': ' + dataset.rawdata[tooltipItem.index] + ' (' + dataset.data[tooltipItem.index].toFixed(1) + '%)';
+                }
+            }` : ""}
+        }
+    }
+    if (myChart${target}) {
+      myChart${target}.destroy();
+    }
+    var lv_labels = ["Lv40","Lv41", "Lv42", "Lv43", "Lv44", "Lv45", "Lv46", "Lv47", "Lv48", "Lv49", "Lv50"];
+    var ctx = document.getElementById("${target}graph");
+    var myChart${target} = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: lv_labels,
+            datasets: [
+                {
+                label: 'score',
+                type: 'line',
+                lineTension: 0,
+                borderColor: "rgba(40,40,40,0.8)",
+                pointBackgroundColor: "rgba(40,40,40,0.8)",
+                fill: false,
+                yAxisID: 'scoreY',
+                data: [`
+  for (const key in calcdata.lvScoreAve) {
+    scriptInnerHTML += `${calcdata.lvScoreAve[key].toFixed(1)}, `;
+  }
+  scriptInnerHTML += `
+                ]
+                },
+                `
+  for (let i = 0; i < labels.length; i++) {
+    scriptInnerHTML += `
+                {
+                label: '${labels[i]}',
+                borderWidth:1,
+                backgroundColor: '${colors[i]}',
+                borderColor: '${colors[i]}',
+                yAxisID: 'medalY',
+                data: [`
+    for (const key in data) {
+      // メダル数の配列は、[0]にエラーメダル番号が入っているので[1]から。
+      // lvPlayCountは 0 かもしれないので、割り算できるように0なら1にしておく
+      scriptInnerHTML += `${percentMode ? (data[key][i + 1]*100 / (calcdata.lvPlayCount[key] || 1)) : data[key][i + 1]},`
+    }
+    scriptInnerHTML += `],
+                rawdata: [`
+    for (const key in data) {
+      scriptInnerHTML += `${data[key][i + 1]},`
+    }
+    scriptInnerHTML += `]
+                },`
+  }
+  scriptInnerHTML += `
+            ]
+        },
+        options: option
+    });
+  `
+  addScript(`dynamic-${target}-graph`, scriptInnerHTML);
+}
+
 function makeTd(txt) {
   const td = document.createElement("td");
   td.textContent = txt;
@@ -476,6 +600,42 @@ function createScoreTable(scores, plays){
   document.body.appendChild(document.createElement('br'));
 }
 
+// 個人情報表ページの最上部ボタン群
+function addPersonalDatapageTopButton(calcdata) {
+  let btnClass = "btn btn-primary mr-4";
+  // 一覧に戻るボタン
+  let backbtn = document.createElement('button');
+  backbtn.className = btnClass;
+  backbtn.textContent = "一覧に戻る";
+  backbtn.addEventListener('click', async () => { await allpage() });
+  document.body.appendChild(backbtn);
+
+  // グラフの描画モード切替
+  let graphModeSwitch = document.createElement('button');
+  graphModeSwitch.className = btnClass;
+  graphModeSwitch.innerText = "曲数グラフ/割合グラフ";
+  graphModeSwitch.addEventListener('click', async () => {
+    let before = await getSessionStorage(STORAGE_KEY.GRAPH_MODE_PERCENT, () => false);
+    setSessionStorage(STORAGE_KEY.GRAPH_MODE_PERCENT, !before);
+    refreshGraphImage("medal", calcdata);
+    refreshGraphImage("rank", calcdata);
+  });
+  document.body.appendChild(graphModeSwitch);
+
+  // 表を隠すボタン
+  let hidebtn = document.createElement('button');
+  hidebtn.className = btnClass;
+  hidebtn.setAttribute("data-toggle", "collapse");
+  hidebtn.setAttribute("data-target", ".hideitems");
+  hidebtn.setAttribute("aria-expanded", "false");
+  hidebtn.setAttribute("aria-controls", "medal-table rank-table score-table");
+  hidebtn.innerText = "詳細を見る/隠す";
+  document.body.appendChild(hidebtn);
+
+  document.body.appendChild(document.createElement('br'));
+  document.body.appendChild(document.createElement('br'));
+}
+
 // 個人情報表ページ
 async function personal_datapage() {
   showMessage("プレイデータの読み込み中・・・", true);
@@ -490,33 +650,22 @@ async function personal_datapage() {
 
   cleanupHTML();
 
-  // 一覧に戻るボタン
-  let b = document.createElement('button');
-  b.className = "btn btn-primary mr-4";
-  b.textContent = "一覧に戻る";
-  b.addEventListener('click', async () => { await allpage() });
-  document.body.appendChild(b);
-
-  // 表を隠すボタン
-  let hidebtn = document.createElement('button');
-  hidebtn.className = "btn btn-primary mr-4";
-  hidebtn.setAttribute("data-toggle", "collapse");
-  hidebtn.setAttribute("data-target", ".hideitems");
-  hidebtn.setAttribute("aria-expanded", "false");
-  hidebtn.setAttribute("aria-controls", "medal-table rank-table score-table");
-  hidebtn.innerText = "詳細を見る/隠す";
-  document.body.appendChild(hidebtn);
-
-  document.body.appendChild(document.createElement('br'));
-
-  // メダル取得表
+  // 設定ボタンなど
+  addPersonalDatapageTopButton(calcdata);
+  // 各種グラフ
+  appendGraphBase("クリアメダル分布と平均スコア", "medal");
   createDataTable("クリアメダル一覧", "medal", `${GITHUB_URL}/c_icon/c_`, calcdata.lvMedalCount, 11, calcdata.lvSongCount);
+  appendGraphBase("クリアランク分布と平均スコア", "rank");
   createDataTable("クリアランク一覧", "rank", `${GITHUB_URL}/c_icon/s_`, calcdata.lvRankCount, 8, calcdata.lvSongCount);
   // 平均スコア表
   createScoreTable(calcdata.lvScoreAve, calcdata.lvPlayCount);
-  // TODO : Lvごと分布グラフ / 数ベースと、割合ベース
+
+  // メダル取得グラフ描画 (将来的に数と割合で切り替えるため、画面更新を別関数化)
+  refreshGraphImage("medal", calcdata);
+  refreshGraphImage("rank", calcdata);
+
   // TODO : 曲一覧表 メダル表やグラフをクリックすると、その条件でフィルタリングされた曲一覧に更新されて、その表示位置にジャンプ
-  // TODO : データ更新ボタン
+  // TODO : データ更新ボタン。前回の取得日時と時差を表示しておく。となると、ローカルの自動更新は1wより長くていいか？週1プレイヤーは更新いらないだろう
 }
 
 // 現在表示できるリストの一覧を表示して選択してもらうためのページ部品。
