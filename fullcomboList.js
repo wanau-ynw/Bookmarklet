@@ -51,13 +51,14 @@ async function whatever(url) {
   return Array.from(tableRows)
     .filter((li) => li.firstElementChild.className === "col_music_lv")  // 曲データだけ抽出
     .map((li) => [
-      songtrim(li.children[0].firstElementChild.textContent),
+      li.children[0].firstElementChild.textContent,
+      li.querySelector('.col_music_lv div:nth-of-type(1)').textContent,
       parseInt(li.children[3].textContent.trim()),
       medalurlToInt(li.children[3].firstChild.src),
       li.children[3].children.length >= 2 ? rankurlToInt(li.children[3].children[1].src) : getErrorMedalID(),
     ])
-    .map(([song, score, medal, rank]) => {
-      return { song, score, medal, rank};
+    .map(([song, genre, score, medal, rank]) => {
+      return { song, genre, score, medal, rank};
     });
 }
 
@@ -143,6 +144,7 @@ function drawIcons(ctx, data, mlist, icon, scoreicon, x, y, dx, dy, iconsize) {
     if (isErrorMedalID(d["medal"])){
       continue;
     }
+    d["song"] = songtrim(d["song"]);
     // 表データ内から曲を探す。もっといい方法がありそうだけど、せいぜい数百件のデータなので性能問題は無いでしょう
     for (let i = 0; i < mlist.length; i++) {
       for (let j = 0; j < mlist[i].length; j++) {
@@ -331,6 +333,109 @@ function calcPersonalData(data) {
   };
 }
 
+// 曲一覧描画用のプレースホルダをHTMLに追加する
+function appendMusicListBase() {
+  let t = document.createElement('h2');
+  t.id = 'musiclist-title';
+  t.textContent = "曲一覧";
+  document.body.appendChild(t);
+
+  const table = document.createElement('table');
+  table.id = 'musiclist-table';
+  table.className = 'table table-striped table-bordered table-sm';
+
+  // テーブルのヘッダーを作成
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  const headers = ['Lv', 'ジャンル名', '曲名', 'メダル', 'スコア'];
+
+  headers.forEach(headerText => {
+    const th = document.createElement('th');
+    th.textContent = headerText;
+    headerRow.appendChild(th);
+  });
+
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+  document.body.appendChild(table);
+}
+
+async function moveToMusicList(e, lv=null, medalmode=null, medalid=null, nomedal=false) {
+  e.preventDefault();
+  refreshMusicList(lv, medalmode, medalid, nomedal);
+  document.getElementById('musiclist-title').scrollIntoView({ behavior: "smooth" });
+}
+
+// 曲一覧の再描画
+async function refreshMusicList(lv=null, medalmode=null, medalid=null, nomedal=false) {
+  let data = await getLocalStorage(STORAGE_KEY.PERSONAL_DATA, () => wapper_personal());
+  if (!data || data.length == 0 || !data[0]) {
+    showMessage("プレイデータの読み取りに失敗しました", true, true);
+    return;
+  }
+  // タイトル変更
+  let t = document.getElementById('musiclist-title');
+  t.innerHTML = "曲一覧";
+  if(lv){
+    t.innerHTML += ` / レベル条件${lv}`;
+  }
+  if (medalmode == "medal") {
+    t.innerHTML += ` / クリアメダル条件:<img src="${GITHUB_URL}/c_icon/c_${medalid}.png" height="32px" _pageexpand_="32"></img>`;
+  } else if (medalmode == "rank") {
+    t.innerHTML += ` / クリアランク条件:<img src="${GITHUB_URL}/c_icon/s_${medalid}.png" height="32px" _pageexpand_="32"></img>`;
+  }
+  if(nomedal){
+    t.innerHTML += ` / 未プレイ`;
+  }
+  
+  // 曲一覧データ変更
+  let scriptInnerHTML = `
+  var data = [`;
+  data.forEach(lvdata => {
+    // Lvフィルタ
+    if(lv && lv != lvdata.lv)return;
+    lvdata.data.forEach(d => {
+      // Lv/メダルフィルタ
+      if (nomedal && d.score != 0)return;
+      if (!nomedal && d.score == 0)return;
+      if (medalmode == "medal" && d.medal != medalid)return;
+      if (medalmode == "rank" && d.rank != medalid)return;
+      scriptInnerHTML += `
+          {
+              "lv": ${lvdata.lv},
+              "genre": '${d.genre.replace(/'/g, "\\'").replace(/"/g, '\\"')}',
+              "title": '${d.song.replace(/'/g, "\\'").replace(/"/g, '\\"')}',
+              "mymedal": '<div hidden>${medalIDsTotext(d.rank, d.medal)}</div>${medalIDsToImg(d.rank, d.medal, GITHUB_URL)}',
+              "score": '${d.score}'
+          },`;
+    });
+  });
+  scriptInnerHTML += `
+      ]
+  $(document).ready(function() {
+      if ($.fn.DataTable.isDataTable('#musiclist-table')) {
+          $('#musiclist-table').DataTable().destroy();
+      }
+      $('#musiclist-table').DataTable({
+          displayLength: 50,
+          data: data,
+          columns: [
+              { data: "lv" },
+              { data: "genre" },
+              { data: "title" },
+              { data: "mymedal" },
+              { data: "score" }
+          ],
+          "columnDefs": [
+              { className: "text-right", targets: [0,4] },
+              { width: '78px', targets: [3] }
+          ]
+      });
+  });
+  `;
+  addScript("dynamic-musiclist", scriptInnerHTML);
+}
+
 // メダル一覧グラフ描画用のキャンバスをHTMLに追加する
 function appendGraphBase(title, id) {
   let t = document.createElement('h2');
@@ -456,7 +561,7 @@ async function refreshGraphImage(target, calcdata) {
 
 function makeTd(txt) {
   const td = document.createElement("td");
-  td.textContent = txt;
+  td.innerHTML = txt;
   return td;
 }
 
@@ -508,18 +613,20 @@ function createDataTable(title, idbase, headbase, data, colLen, songcount){
       // 値の配列をループしてセルを追加(最初のデータはエラーメダルデータ数なのでスキップする)
       data[key].slice(1).reverse().forEach((value, index) => {
         const cell = document.createElement("td");
-        cell.textContent = value;
         if(value === 0){
           cell.style = "color:#999999"  // 値が0のセルはグレーにして目立たせなくする
+          cell.innerHTML = value;
+        }else{
+          cell.innerHTML = `<a href='#musiclist-title' onclick="moveToMusicList(event, ${key}, '${idbase}', ${colLen-index})">${value}</a>`;
         }
         rowtotal += value;
         columnTotals[index] += value;
         row.appendChild(cell);
       });
       // カラム合計を表示
-      row.appendChild(makeTd(rowtotal));
+      row.appendChild(makeTd(`<a href='#musiclist-title' onclick="moveToMusicList(event, ${key})">${rowtotal}</a>`));
       // メダルがない曲数
-      row.appendChild(makeTd(songcount[key] - rowtotal));
+      row.appendChild(makeTd(`<a href='#musiclist-title' onclick="moveToMusicList(event, ${key}, null, null, true)">${songcount[key] - rowtotal}</a>`));
       nomedalTotal += songcount[key] - rowtotal;
 
       tbody.appendChild(row);
@@ -531,11 +638,11 @@ function createDataTable(title, idbase, headbase, data, colLen, songcount){
   totalRow.appendChild(makeTd("合計"));
 
   // 各列の合計をセルに追加
-  columnTotals.forEach(columnTotal => {
-    totalRow.appendChild(makeTd(columnTotal));
+  columnTotals.forEach((columnTotal, index) => {
+    totalRow.appendChild(makeTd(`<a href='#musiclist-title' onclick="moveToMusicList(event, null, '${idbase}', ${colLen-index})">${columnTotal}</a>`));
   });
-  totalRow.appendChild(makeTd(grandTotal));
-  totalRow.appendChild(makeTd(nomedalTotal));
+  totalRow.appendChild(makeTd(`<a href='#musiclist-title' onclick="moveToMusicList(event)">${grandTotal}</a>`));
+  totalRow.appendChild(makeTd(`<a href='#musiclist-title' onclick="moveToMusicList(event, null, null, null, true)">${nomedalTotal}</a>`));
 
   tbody.appendChild(totalRow);
   table.appendChild(tbody);
@@ -602,17 +709,16 @@ function createScoreTable(scores, plays){
 
 // 個人情報表ページの最上部ボタン群
 function addPersonalDatapageTopButton(calcdata) {
-  let btnClass = "btn btn-primary mr-4";
   // 一覧に戻るボタン
   let backbtn = document.createElement('button');
-  backbtn.className = btnClass;
+  backbtn.className = "btn btn-primary mr-4";
   backbtn.textContent = "一覧に戻る";
   backbtn.addEventListener('click', async () => { await allpage() });
   document.body.appendChild(backbtn);
 
   // グラフの描画モード切替
   let graphModeSwitch = document.createElement('button');
-  graphModeSwitch.className = btnClass;
+  graphModeSwitch.className = "btn btn-info mr-4";
   graphModeSwitch.innerText = "曲数グラフ/割合グラフ";
   graphModeSwitch.addEventListener('click', async () => {
     let before = await getSessionStorage(STORAGE_KEY.GRAPH_MODE_PERCENT, () => false);
@@ -624,7 +730,7 @@ function addPersonalDatapageTopButton(calcdata) {
 
   // 表を隠すボタン
   let hidebtn = document.createElement('button');
-  hidebtn.className = btnClass;
+  hidebtn.className = "btn btn-info mr-4";
   hidebtn.setAttribute("data-toggle", "collapse");
   hidebtn.setAttribute("data-target", ".hideitems");
   hidebtn.setAttribute("aria-expanded", "false");
@@ -659,12 +765,14 @@ async function personal_datapage() {
   createDataTable("クリアランク一覧", "rank", `${GITHUB_URL}/c_icon/s_`, calcdata.lvRankCount, 8, calcdata.lvSongCount);
   // 平均スコア表
   createScoreTable(calcdata.lvScoreAve, calcdata.lvPlayCount);
+  // 曲一覧
+  appendMusicListBase();
 
-  // メダル取得グラフ描画 (将来的に数と割合で切り替えるため、画面更新を別関数化)
+  // メダル取得グラフ描画 (数と割合で切り替えるため、画面更新を別関数化)
   refreshGraphImage("medal", calcdata);
   refreshGraphImage("rank", calcdata);
+  refreshMusicList();
 
-  // TODO : 曲一覧表 メダル表やグラフをクリックすると、その条件でフィルタリングされた曲一覧に更新されて、その表示位置にジャンプ
   // TODO : データ更新ボタン。前回の取得日時と時差を表示しておく。となると、ローカルの自動更新は1wより長くていいか？週1プレイヤーは更新いらないだろう
 }
 
@@ -712,7 +820,7 @@ async function allpage_sub_personal() {
   maindiv.className = "button-container";
   let subdiv = document.createElement('div');
   let b = document.createElement('button');
-  b.textContent = "Lv40～50 統計";
+  b.textContent = "Lv40～50 まとめ";
   b.addEventListener('click', async () => {
     await personal_datapage();
   });

@@ -116,25 +116,18 @@ function addDiffList(name, tomoname) {
 
 function medalTotext(d, player) {
     if (player == 1){
-        return String(d["p1rank"]).padStart(2, '0') + String(d["p1medal"]).padStart(2, '0');
+        return medalIDsTotext(d["p1rank"], d["p1medal"]);
     }else{
-        return String(d["p2rank"]).padStart(2, '0') + String(d["p2medal"]).padStart(2, '0');
+        return medalIDsTotext(d["p2rank"], d["p2medal"]);
     }
 }
 
 function medalToImg(d, player) {
     if (player == 1){
-        if(isErrorMedalID(d["p1medal"]) || isErrorMedalID(d["p1rank"])){
-            return "";
-        }
-        return `<img src="${GITHUB_URL}/icon/s_${d["p1rank"]}.png" height="32px"><img src="${GITHUB_URL}/c_icon/c_${d["p1medal"]}.png" height="32px"></img>`
+        return medalIDsToImg(d["p1rank"], d["p1medal"], GITHUB_URL);
     }else{
-        if(isErrorMedalID(d["p2medal"]) || isErrorMedalID(d["p2rank"])){
-            return "";
-        }
-        return `<img src="${GITHUB_URL}/icon/s_${d["p2rank"]}.png" height="32px"><img src="${GITHUB_URL}/c_icon/c_${d["p2medal"]}.png" height="32px"></img>`
+        return medalIDsToImg(d["p2rank"], d["p2medal"], GITHUB_URL);
     }
-
 }
 
 function addDiffListScript(data) {

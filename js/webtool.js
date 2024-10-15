@@ -186,6 +186,17 @@ function getErrorMedalID() {
     return ERROR_MEDAL_ID;
 }
 
+function medalIDsTotext(rank, medal) {
+  return String(rank).padStart(2, '0') + String(medal).padStart(2, '0');
+}
+
+function medalIDsToImg(rank, medal, githuburl) {
+  if (isErrorMedalID(rank) || isErrorMedalID(medal)) {
+    return "";
+  }
+  return `<img src="${githuburl}/icon/s_${rank}.png" height="32px"><img src="${githuburl}/c_icon/c_${medal}.png" height="32px"></img>`
+}
+
 /**
  * 結果用メダル画像を読み込む
  * @param {*} baseurl メダル画像を保存している基準URL (通常は、このツールが入っているGithub PagesのURL)
