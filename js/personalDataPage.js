@@ -2,9 +2,41 @@ const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/jamfizz/playdata/mu_lv.
 // const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
 const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
 
-const STORAGE_KEY = {
+const PD_STORAGE_KEY = {
     PERSONAL_DATA: "personal_data",
     GRAPH_MODE_PERCENT: "graph_mode_percent",
+}
+
+// URLを読み込み、そのページ内の全データを返す
+async function whatever(url) {
+  console.log("load url : " + url)
+  let domparser = new DOMParser();
+  // スコア情報テーブルを探す
+  let tables = await fetch(url)
+    .then(resToText)
+    .then((text) => domparser.parseFromString(text, "text/html"))
+    .then((doc) => doc.querySelectorAll(".mu_list_table"))
+
+  if (tables.length != 1) {
+    console.log("table not found : " + url)
+    showMessage("プレイデータ読み込み時にエラーが発生しました", false, true);
+    return
+  }
+  let tableRows = tables[0].querySelectorAll("li")
+
+  // テーブルの各列から保存したい要素を抽出する。
+  return Array.from(tableRows)
+    .filter((li) => li.firstElementChild.className === "col_music_lv")  // 曲データだけ抽出
+    .map((li) => [
+      li.children[0].firstElementChild.textContent,
+      li.querySelector('.col_music_lv div:nth-of-type(1)').textContent,
+      parseInt(li.children[3].textContent.trim()),
+      medalurlToInt(li.children[3].firstChild.src),
+      li.children[3].children.length >= 2 ? rankurlToInt(li.children[3].children[1].src) : getErrorMedalID(),
+    ])
+    .map(([song, genre, score, medal, rank]) => {
+      return { song, genre, score, medal, rank};
+    });
 }
 
 // 個人データ参照のため、特定のレベル範囲の曲をすべて取得する。
@@ -113,7 +145,7 @@ async function moveToMusicList(e, lv=null, medalmode=null, medalid=null, nomedal
 
 // 曲一覧の再描画
 async function refreshMusicList(lv=null, medalmode=null, medalid=null, nomedal=false) {
-  let data = await getLocalStorage(STORAGE_KEY.PERSONAL_DATA, () => wapper_personal());
+  let data = await getLocalStorage(PD_STORAGE_KEY.PERSONAL_DATA, () => wapper_personal());
   if (!data || data.length == 0 || !data[0]) {
     showMessage("プレイデータの読み取りに失敗しました", true, true);
     return;
@@ -205,7 +237,7 @@ async function refreshGraphImage(target, calcdata) {
     colors = ["#71588f", "#4198af", "#89a54e", "#db843d", "#f8b1df", "#ef637e", "#da163e", "#c0c000"];
     data = calcdata.lvRankCount;
   }
-  let percentMode = await getSessionStorage(STORAGE_KEY.GRAPH_MODE_PERCENT, () => false);
+  let percentMode = await getSessionStorage(PD_STORAGE_KEY.GRAPH_MODE_PERCENT, () => false);
 
   // スクリプトの追加
   let scriptInnerHTML = `
@@ -453,12 +485,12 @@ function createScoreTable(scores, plays){
 }
 
 // 個人情報表ページの最上部ボタン群
-function addPersonalDatapageTopButton(calcdata) {
+function addPersonalDatapageTopButton(calcdata, mainpagecallback) {
   // 一覧に戻るボタン
   let backbtn = document.createElement('button');
   backbtn.className = "btn btn-primary mr-4";
   backbtn.textContent = "一覧に戻る";
-  backbtn.addEventListener('click', async () => { await allpage() });
+  backbtn.addEventListener('click', async () => { await Promise.resolve(mainpagecallback()) });
   document.body.appendChild(backbtn);
 
   // グラフの描画モード切替
@@ -466,8 +498,8 @@ function addPersonalDatapageTopButton(calcdata) {
   graphModeSwitch.className = "btn btn-info mr-4";
   graphModeSwitch.innerText = "曲数グラフ/割合グラフ";
   graphModeSwitch.addEventListener('click', async () => {
-    let before = await getSessionStorage(STORAGE_KEY.GRAPH_MODE_PERCENT, () => false);
-    setSessionStorage(STORAGE_KEY.GRAPH_MODE_PERCENT, !before);
+    let before = await getSessionStorage(PD_STORAGE_KEY.GRAPH_MODE_PERCENT, () => false);
+    setSessionStorage(PD_STORAGE_KEY.GRAPH_MODE_PERCENT, !before);
     refreshGraphImage("medal", calcdata);
     refreshGraphImage("rank", calcdata);
   });
@@ -488,9 +520,9 @@ function addPersonalDatapageTopButton(calcdata) {
 }
 
 // 個人情報表ページ
-async function personal_datapage() {
+async function personal_datapage(mainpagecallback) {
   showMessage("プレイデータの読み込み中・・・", true);
-  let data = await getLocalStorage(STORAGE_KEY.PERSONAL_DATA, () => wapper_personal());
+  let data = await getLocalStorage(PD_STORAGE_KEY.PERSONAL_DATA, () => wapper_personal());
   if (!data || data.length == 0 || !data[0]) {
     showMessage(
       "プレイデータの読み取りに失敗しました。<br>" + 
@@ -502,7 +534,7 @@ async function personal_datapage() {
   cleanupHTML();
 
   // 設定ボタンなど
-  addPersonalDatapageTopButton(calcdata);
+  addPersonalDatapageTopButton(calcdata, mainpagecallback);
   // 各種グラフ
   appendGraphBase("クリアメダル分布と平均スコア", "medal");
   createDataTable("クリアメダル一覧", "medal", `${GITHUB_URL}/c_icon/c_`, calcdata.lvMedalCount, 11, calcdata.lvSongCount);
@@ -522,7 +554,7 @@ async function personal_datapage() {
 }
 
 // 個人統計情報ページへの遷移ボタンを画面に追加
-async function allpage_sub_personal() {
+async function allpage_sub_personal(mainpagecallback) {
   // タイトル
   let t = document.createElement('h2');
   t.textContent = "個人データ参照";
@@ -534,7 +566,7 @@ async function allpage_sub_personal() {
   let b = document.createElement('button');
   b.textContent = "Lv40～50 まとめ";
   b.addEventListener('click', async () => {
-    await personal_datapage();
+    await personal_datapage(mainpagecallback);
   });
   // 注意事項
   let p = document.createElement('p');
