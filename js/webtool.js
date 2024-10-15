@@ -22,6 +22,13 @@ function resToText(res) {
   })
 }
 
+/**
+ * 一定時間処理を停止する
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // 曲名の比較用に一部表記ゆれがある文字をトリム・置換する
 // TODO: 表記ゆれ対応の改善 記号やカッコが半角・全角あってないケースが多い
 // 既知の公式ミス？
