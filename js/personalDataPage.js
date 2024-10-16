@@ -119,7 +119,7 @@ function appendMusicListBase() {
 
   const table = document.createElement('table');
   table.id = 'musiclist-table';
-  table.className = 'table table-striped table-bordered table-sm';
+  table.className = 'table table-striped table-bordered table-sm col-md-12 col-sm-12';
 
   // テーブルのヘッダーを作成
   const thead = document.createElement('thead');
@@ -194,8 +194,9 @@ async function refreshMusicList(lv=null, medalmode=null, medalid=null, nomedal=f
           $('#musiclist-table').DataTable().destroy();
       }
       $('#musiclist-table').DataTable({
-          displayLength: 50,
+          displayLength: 25,
           data: data,
+          responsive: true,
           columns: [
               { data: "lv" },
               { data: "genre" },
@@ -515,6 +516,23 @@ function addPersonalDatapageTopButton(calcdata, mainpagecallback) {
   hidebtn.innerText = "詳細を見る/隠す";
   document.body.appendChild(hidebtn);
 
+  // データ取得日
+  let datatime = getLocalStorageTimeAndDiff(PD_STORAGE_KEY.PERSONAL_DATA);
+  let p = document.createElement('p');
+  p.textContent = `データ取得日: ${datatime} ※データ更新ボタンは画面の一番下にあります`;
+  document.body.appendChild(p);
+}
+
+function addPersonalDatapageBottomButton(calcdata, mainpagecallback) {
+  document.body.appendChild(document.createElement('br'));
+
+  // 一覧に戻るボタン
+  let backbtn = document.createElement('button');
+  backbtn.className = "btn btn-primary mr-5";
+  backbtn.textContent = "一覧に戻る";
+  backbtn.addEventListener('click', async () => { await Promise.resolve(mainpagecallback()) });
+  document.body.appendChild(backbtn);
+
   // データ更新ボタン
   let dataUpdateBtn = document.createElement('button');
   dataUpdateBtn.className = "btn btn-danger ml-5 mr-4";
@@ -525,7 +543,6 @@ function addPersonalDatapageTopButton(calcdata, mainpagecallback) {
   });
   document.body.appendChild(dataUpdateBtn);
   document.body.appendChild(document.createElement('br'));
-
   // データ取得日
   let datatime = getLocalStorageTimeAndDiff(PD_STORAGE_KEY.PERSONAL_DATA);
   let p = document.createElement('p');
@@ -547,7 +564,7 @@ async function personal_datapage(mainpagecallback) {
 
   cleanupHTML();
 
-  // 設定ボタンなど
+  // ヘッダー設定ボタンなど
   addPersonalDatapageTopButton(calcdata, mainpagecallback);
   // 各種グラフ
   appendGraphBase("クリアメダル分布と平均スコア", "medal");
@@ -558,6 +575,8 @@ async function personal_datapage(mainpagecallback) {
   createScoreTable(calcdata.lvScoreAve, calcdata.lvPlayCount);
   // 曲一覧
   appendMusicListBase();
+  // フッター設定ボタンなど
+  addPersonalDatapageBottomButton(calcdata, mainpagecallback);
 
   // メダル取得グラフ描画 (数と割合で切り替えるため、画面更新を別関数化)
   refreshGraphImage("medal", calcdata);
