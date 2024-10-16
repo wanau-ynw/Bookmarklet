@@ -515,8 +515,22 @@ function addPersonalDatapageTopButton(calcdata, mainpagecallback) {
   hidebtn.innerText = "詳細を見る/隠す";
   document.body.appendChild(hidebtn);
 
+  // データ更新ボタン
+  let dataUpdateBtn = document.createElement('button');
+  dataUpdateBtn.className = "btn btn-danger ml-5 mr-4";
+  dataUpdateBtn.innerText = "データ更新(時間がかかります)";
+  dataUpdateBtn.addEventListener('click', async () => {
+    localStorage.removeItem(PD_STORAGE_KEY.PERSONAL_DATA);
+    await personal_datapage(mainpagecallback);
+  });
+  document.body.appendChild(dataUpdateBtn);
   document.body.appendChild(document.createElement('br'));
-  document.body.appendChild(document.createElement('br'));
+
+  // データ取得日
+  let datatime = getLocalStorageTimeAndDiff(PD_STORAGE_KEY.PERSONAL_DATA);
+  let p = document.createElement('p');
+  p.textContent = `データ取得日: ${datatime}`;
+  document.body.appendChild(p);
 }
 
 // 個人情報表ページ
@@ -549,8 +563,6 @@ async function personal_datapage(mainpagecallback) {
   refreshGraphImage("medal", calcdata);
   refreshGraphImage("rank", calcdata);
   refreshMusicList();
-
-  // TODO : データ更新ボタン。前回の取得日時と時差を表示しておく。となると、ローカルの自動更新は1wより長くていいか？週1プレイヤーは更新いらないだろう
 }
 
 // 個人統計情報ページへの遷移ボタンを画面に追加

@@ -33,7 +33,7 @@ function setSessionStorage(key, data) {
 /**
  * ローカルストレージのデータを取得または新規作成して保存する
  * ただし、以下の条件の時は保存されたデータがあっても新規作成する
- * - 前回保存から１週間以上経過している
+ * - 前回保存から一定時間が経過している
  * - バージョンが変わっている
  */
 async function getLocalStorage(key, createDataFunc) {
@@ -49,9 +49,9 @@ async function getLocalStorage(key, createDataFunc) {
             data = null;
         } else {
             let savedTimestamp = new Date(data.timestamp).getTime();
-            let oneWeekAgo = new Date().getTime() - (7 * 24 * 60 * 60 * 1000);
+            let oneMonthAgo = new Date().getTime() - (30 * 24 * 60 * 60 * 1000);
             let savedTimeStr = new Date(data.timestamp).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
-            if (savedTimestamp < oneWeekAgo) {
+            if (savedTimestamp < oneMonthAgo) {
                 console.log("localStorage timestamp too old: " + savedTimeStr);
                 data = null;
             }else{
@@ -66,6 +66,25 @@ async function getLocalStorage(key, createDataFunc) {
         setLocalStorage(key, data);
     }
     return data;
+}
+
+/**
+ * ローカルストレージが保存されたタイムスタンプと、現在時刻との差を文字列で返す
+ */
+function getLocalStorageTimeAndDiff(key) {
+    let data = localStorage.getItem(key);
+    if(!data){
+        console.log("localStorage data not found");
+        return "";
+    }
+    data = JSON.parse(data);
+    if (!('timestamp' in data)) {
+        console.log("localStorage data timestamp not found");
+        return "";
+    }
+    let daydiff = (new Date() - new Date(data.timestamp))/86400000;
+    let savedTimeStr = new Date(data.timestamp).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+    return `${savedTimeStr} (${daydiff.toFixed(1)}日前)`;
 }
 
 function setLocalStorage(key, data) {
