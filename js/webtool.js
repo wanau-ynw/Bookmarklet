@@ -22,6 +22,13 @@ function resToText(res) {
   })
 }
 
+/**
+ * 一定時間処理を停止する
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // 曲名の比較用に一部表記ゆれがある文字をトリム・置換する
 // TODO: 表記ゆれ対応の改善 記号やカッコが半角・全角あってないケースが多い
 // 既知の公式ミス？
@@ -33,27 +40,6 @@ function resToText(res) {
 function songtrim(s) {
   return s.trim().replaceAll("～","").replaceAll("〜","").replaceAll("＼","").replaceAll("  "," ").replaceAll("　"," ").replaceAll("！","!");
 }
-
-// セッションストレージのデータを取得または新規作成して保存する
-async function getStorageData(key, createDataFunc) {
-  let data = sessionStorage.getItem(key);
-  if (data === null) {
-    let newData = await Promise.resolve(createDataFunc()); // 同期関数・非同期関数どちらが渡されてもいいように。
-    let jsondata = JSON.stringify(newData);
-    sessionStorage.setItem(key, jsondata);
-    console.log("save sessionStorage : " + key + " : about " + jsondata.length + "byte");
-    data = newData;
-  } else {
-    console.log("load sessionStorage : " + key);
-    data = JSON.parse(data);
-  }
-  return data;
-}
-
-function setStorageData(key, data) {
-  sessionStorage.setItem(key, JSON.stringify(data));
-}
-
 
 /**
  * ユーザー名を返す
@@ -134,6 +120,20 @@ async function loadCSS(href) {
   });
 }
 
+// ページにスクリプトを追加する。すでにある場合は削除して作り直す
+function addScript(scriptId, scriptContent) {
+    const scriptElement = document.getElementById(scriptId);
+    if (scriptElement) {
+        scriptElement.parentNode.removeChild(scriptElement);
+    }
+
+    const script = document.createElement('script');
+    script.type = "text/javascript";
+    script.id = scriptId;
+    script.innerHTML = scriptContent;
+    document.head.appendChild(script);
+}
+
 /**
  * 画像ファイルを読み込んで返す
  */
@@ -191,6 +191,17 @@ function isErrorMedalID(id) {
 
 function getErrorMedalID() {
     return ERROR_MEDAL_ID;
+}
+
+function medalIDsTotext(rank, medal) {
+  return String(rank).padStart(2, '0') + String(medal).padStart(2, '0');
+}
+
+function medalIDsToImg(rank, medal, githuburl) {
+  if (isErrorMedalID(rank) || isErrorMedalID(medal)) {
+    return "";
+  }
+  return `<img src="${githuburl}/icon/s_${rank}.png" height="32px"><img src="${githuburl}/c_icon/c_${medal}.png" height="32px"></img>`
 }
 
 /**

@@ -1,4 +1,5 @@
 const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
+
 const STORAGE_KEY = {
     SELECTED_LV: "selected_lv",
     SELECTED_TOMO_ID: "selected_tomo_id",
@@ -92,20 +93,6 @@ async function wapper(id, lv) {
     return (await Promise.all(promises)).flat();
 }
 
-// ページにスクリプトを追加する。すでにある場合は削除して作り直す
-function addScript(scriptId, scriptContent) {
-    const scriptElement = document.getElementById(scriptId);
-    if (scriptElement) {
-        scriptElement.parentNode.removeChild(scriptElement);
-    }
-
-    const script = document.createElement('script');
-    script.type = "text/javascript";
-    script.id = scriptId;
-    script.innerHTML = scriptContent;
-    document.head.appendChild(script);
-}
-
 function addDiffList(name, tomoname) {
     const table = document.createElement('table');
     table.id = PLACEHOLDER_ID.MUSIC_LIST;
@@ -129,25 +116,18 @@ function addDiffList(name, tomoname) {
 
 function medalTotext(d, player) {
     if (player == 1){
-        return String(d["p1rank"]).padStart(2, '0') + String(d["p1medal"]).padStart(2, '0');
+        return medalIDsTotext(d["p1rank"], d["p1medal"]);
     }else{
-        return String(d["p2rank"]).padStart(2, '0') + String(d["p2medal"]).padStart(2, '0');
+        return medalIDsTotext(d["p2rank"], d["p2medal"]);
     }
 }
 
 function medalToImg(d, player) {
     if (player == 1){
-        if(isErrorMedalID(d["p1medal"]) || isErrorMedalID(d["p1rank"])){
-            return "";
-        }
-        return `<img src="${GITHUB_URL}/icon/s_${d["p1rank"]}.png" height="32px"><img src="${GITHUB_URL}/c_icon/c_${d["p1medal"]}.png" height="32px"></img>`
+        return medalIDsToImg(d["p1rank"], d["p1medal"], GITHUB_URL);
     }else{
-        if(isErrorMedalID(d["p2medal"]) || isErrorMedalID(d["p2rank"])){
-            return "";
-        }
-        return `<img src="${GITHUB_URL}/icon/s_${d["p2rank"]}.png" height="32px"><img src="${GITHUB_URL}/c_icon/c_${d["p2medal"]}.png" height="32px"></img>`
+        return medalIDsToImg(d["p2rank"], d["p2medal"], GITHUB_URL);
     }
-
 }
 
 function addDiffListScript(data) {
@@ -351,10 +331,10 @@ async function addOption(optiondiv, id, label, defo, storage, callback) {
     let skipEmptydataCheck = document.createElement('input');
     skipEmptydataCheck.type = "checkbox";
     skipEmptydataCheck.id = id;
-    skipEmptydataCheck.checked = await getStorageData(storage, () => defo);
+    skipEmptydataCheck.checked = await getSessionStorage(storage, () => defo);
     skipEmptydataCheck.addEventListener('change', async (event) => {
         const isChecked = event.target.checked;
-        setStorageData(storage, isChecked);
+        setSessionStorage(storage, isChecked);
         await Promise.resolve(callback());
     });
     let selabel = document.createElement('label');
@@ -371,7 +351,7 @@ async function addOption(optiondiv, id, label, defo, storage, callback) {
 async function diffpage(name, id, tomo, lv) {
     cleanupHTML();
     showMessage("プレイデータの読み込み中・・・", true);
-    let data = await getStorageData(STORAGE_KEY.LV_DATA(id, lv), () => wapper(id, lv));
+    let data = await getSessionStorage(STORAGE_KEY.LV_DATA(id, lv), () => wapper(id, lv));
     if (!data || data.length == 0 || !data[0]) {
         showMessage("曲一覧数取得時にエラーが発生しました", false, true);
         document.body.appendChild(await makeButton('戻る', () => main(name, tomo)));
@@ -451,9 +431,9 @@ async function diffpage(name, id, tomo, lv) {
  * 結果ページの画面にデータを反映する。オプションによって動的に変える
  */
 async function setPlaceholderData(data, name, tomoname){
-    let skipEmptydata = await getStorageData(STORAGE_KEY.SELECTED_SKIP_EMPTY, () => true);
-    let skipWin = await getStorageData(STORAGE_KEY.SELECTED_SKIP_WIN, () => false);
-    let skipLose = await getStorageData(STORAGE_KEY.SELECTED_SKIP_LOSE, () => false);
+    let skipEmptydata = await getSessionStorage(STORAGE_KEY.SELECTED_SKIP_EMPTY, () => true);
+    let skipWin = await getSessionStorage(STORAGE_KEY.SELECTED_SKIP_WIN, () => false);
+    let skipLose = await getSessionStorage(STORAGE_KEY.SELECTED_SKIP_LOSE, () => false);
     let subdata = [];
     data.forEach(d => {
         if (skipEmptydata && (d["p1Score"] == 0 || d["p2Score"] == 0)) {
@@ -510,7 +490,7 @@ async function main(name, tomo) {
     tomosLabel.innerText = '比較相手: ';
     document.body.appendChild(tomosLabel);
     let selectTomo = document.createElement('select');
-    let selectTomoDefoID = await getStorageData(STORAGE_KEY.SELECTED_TOMO_ID, () => 0);
+    let selectTomoDefoID = await getSessionStorage(STORAGE_KEY.SELECTED_TOMO_ID, () => 0);
     tomo.forEach(t => {
         let option = document.createElement('option');
         option.value = t.id; // IDをvalueとして設定
@@ -534,7 +514,7 @@ async function main(name, tomo) {
         option.innerText = i;
         selectLv.appendChild(option);
     }
-    selectLv.value = await getStorageData(STORAGE_KEY.SELECTED_LV, () => 45); // 初期値をLv45に仮設定
+    selectLv.value = await getSessionStorage(STORAGE_KEY.SELECTED_LV, () => 45); // 初期値をLv45に仮設定
     document.body.appendChild(selectLv);
     document.body.appendChild(document.createElement('br'));
 
@@ -543,8 +523,8 @@ async function main(name, tomo) {
     compareButton.innerText = '比較実行';
     compareButton.className = 'btn btn-primary';
     compareButton.onclick = async () => {
-        setStorageData(STORAGE_KEY.SELECTED_LV, parseInt(selectLv.value));
-        setStorageData(STORAGE_KEY.SELECTED_TOMO_ID, selectTomo.value);
+        setSessionStorage(STORAGE_KEY.SELECTED_LV, parseInt(selectLv.value));
+        setSessionStorage(STORAGE_KEY.SELECTED_TOMO_ID, selectTomo.value);
         await diffpage(name, selectTomo.value, tomo, parseInt(selectLv.value));
     };
     document.body.appendChild(compareButton);
@@ -578,6 +558,7 @@ export default async () => {
     await loadScript(GITHUB_URL + "/js/dataTables.bootstrap4.min.js");
     await loadScript(GITHUB_URL + "/js/Chart.bundle.min.js");
     await loadScript(GITHUB_URL + "/js/logger.js");
+    await loadScript(GITHUB_URL + "/js/storage.js");
     await loadScript(GITHUB_URL + "/js/webtool.js");
 
     await loadCSS(GITHUB_URL + "/css/normalize.css");

@@ -32,3 +32,19 @@ async function showMessage(txt, clean = false, error = false) {
   html += "<br>";
   document.body.innerHTML += html;
 }
+
+async function deleteLastMessage() {
+  let content = document.body.innerHTML;
+  let lines = content.split('<br>');
+  // 最後の要素が空の場合、それを削除
+  if (lines[lines.length - 1] === "") {
+    lines.pop();
+  }
+  lines.pop();
+  document.body.innerHTML = lines.join('<br>') + "<br>";
+}
+
+async function replaceLastMessage(txt) {
+  await deleteLastMessage();
+  await showMessage(txt);
+}
