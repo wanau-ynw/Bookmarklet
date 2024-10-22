@@ -26,23 +26,29 @@ export default async (lv, mode=1) => {
   // セッションストレージを初期化
   sessionStorage.clear();
   // js/cssの取り込み
-  await loadScript(GITHUB_URL + "/js/jquery-3.3.1.slim.min.js"); // 注意: 読み込む順番を変えてはいけない
-  await loadScript(GITHUB_URL + "/js/popper.min.js");
-  await loadScript(GITHUB_URL + "/js/bootstrap.min.js");
-  await loadScript(GITHUB_URL + "/js/jquery.dataTables.min.js");
-  await loadScript(GITHUB_URL + "/js/dataTables.bootstrap4.min.js");
-  await loadScript(GITHUB_URL + "/js/Chart.bundle.min.js");
-  await loadScript(GITHUB_URL + "/js/logger.js");
-  await loadScript(GITHUB_URL + "/js/storage.js");
-  await loadScript(GITHUB_URL + "/js/webtool.js");
-  // 関数間の呼び出しを行うため、各処理は別のjsに分離して明にページに読み込む
-  await loadScript(GITHUB_URL + "/js/personalDataPage.js");
-  await loadScript(GITHUB_URL + "/js/difficultyPage.js");
+  try {
+    await loadScript(GITHUB_URL + "/js/jquery-3.3.1.slim.min.js"); // 注意: 読み込む順番を変えてはいけない
+    await loadScript(GITHUB_URL + "/js/popper.min.js");
+    await loadScript(GITHUB_URL + "/js/bootstrap.min.js");
+    await loadScript(GITHUB_URL + "/js/jquery.dataTables.min.js");
+    await loadScript(GITHUB_URL + "/js/dataTables.bootstrap4.min.js");
+    await loadScript(GITHUB_URL + "/js/Chart.bundle.min.js");
+    await loadScript(GITHUB_URL + "/js/logger.js");
+    await loadScript(GITHUB_URL + "/js/storage.js");
+    await loadScript(GITHUB_URL + "/js/webtool.js");
+    // 関数間の呼び出しを行うため、各処理は別のjsに分離して明にページに読み込む
+    await loadScript(GITHUB_URL + "/js/personalDataPage.js");
+    await loadScript(GITHUB_URL + "/js/difficultyPage.js");
 
-  await loadCSS(GITHUB_URL + "/css/normalize.css");
-  await loadCSS(GITHUB_URL + "/css/bootstrap.min.css");
-  await loadCSS(GITHUB_URL + "/css/dataTables.bootstrap4.min.css");
-  await loadCSS(GITHUB_URL + "/css/style.css");
+    await loadCSS(GITHUB_URL + "/css/normalize.css");
+    await loadCSS(GITHUB_URL + "/css/bootstrap.min.css");
+    await loadCSS(GITHUB_URL + "/css/dataTables.bootstrap4.min.css");
+    await loadCSS(GITHUB_URL + "/css/style.css");
+  } catch (error) {
+    console.error("Error loading script:", error.message);
+    document.body.innerHTML = "初期化処理でエラーが発生しました " + error.message;
+    return
+  }
 
   // メダルカウント表示用フォント
   await loadCSS("https://fonts.googleapis.com/css2?family=Varela+Round&display=swap");
