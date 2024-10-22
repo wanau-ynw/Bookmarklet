@@ -551,20 +551,26 @@ export default async () => {
     // セッションストレージを初期化
     sessionStorage.clear();
     // js/cssの取り込み
-    await loadScript(GITHUB_URL + "/js/jquery-3.3.1.slim.min.js"); // 注意: 読み込む順番を変えてはいけない
-    await loadScript(GITHUB_URL + "/js/popper.min.js");
-    await loadScript(GITHUB_URL + "/js/bootstrap.min.js");
-    await loadScript(GITHUB_URL + "/js/jquery.dataTables.min.js");
-    await loadScript(GITHUB_URL + "/js/dataTables.bootstrap4.min.js");
-    await loadScript(GITHUB_URL + "/js/Chart.bundle.min.js");
-    await loadScript(GITHUB_URL + "/js/logger.js");
-    await loadScript(GITHUB_URL + "/js/storage.js");
-    await loadScript(GITHUB_URL + "/js/webtool.js");
+    try {
+        await loadScript(GITHUB_URL + "/js/jquery-3.3.1.slim.min.js"); // 注意: 読み込む順番を変えてはいけない
+        await loadScript(GITHUB_URL + "/js/popper.min.js");
+        await loadScript(GITHUB_URL + "/js/bootstrap.min.js");
+        await loadScript(GITHUB_URL + "/js/jquery.dataTables.min.js");
+        await loadScript(GITHUB_URL + "/js/dataTables.bootstrap4.min.js");
+        await loadScript(GITHUB_URL + "/js/Chart.bundle.min.js");
+        await loadScript(GITHUB_URL + "/js/logger.js");
+        await loadScript(GITHUB_URL + "/js/storage.js");
+        await loadScript(GITHUB_URL + "/js/webtool.js");
 
-    await loadCSS(GITHUB_URL + "/css/normalize.css");
-    await loadCSS(GITHUB_URL + "/css/bootstrap.min.css");
-    await loadCSS(GITHUB_URL + "/css/dataTables.bootstrap4.min.css");
-    await loadCSS(GITHUB_URL + "/css/style.css");
+        await loadCSS(GITHUB_URL + "/css/normalize.css");
+        await loadCSS(GITHUB_URL + "/css/bootstrap.min.css");
+        await loadCSS(GITHUB_URL + "/css/dataTables.bootstrap4.min.css");
+        await loadCSS(GITHUB_URL + "/css/style.css");
+    } catch (error) {
+        console.error("Error loading script:", error.message);
+        document.body.innerHTML = "初期化処理でエラーが発生しました " + error.message;
+        return
+    }
 
     // プレイヤー名とポプともの一覧を取得する
     cleanupHTML();
