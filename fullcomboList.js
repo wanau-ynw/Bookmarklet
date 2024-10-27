@@ -15,6 +15,22 @@ async function loadScript(src) {
   });
 }
 
+/**
+ * CSSファイルの取り込みを行う
+ * webtool.jsに置いてもいいが、iOSの遅延ロード対策に抽出しておく(効果は無いかも)
+ */
+async function loadCSS(href) {
+  return new Promise((resolve, reject) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.crossOrigin = "anonymous"; // iPhone対応
+    link.onload = () => resolve(href);
+    link.onerror = () => reject(new Error(`Failed to load CSS: ${href}`));
+    document.head.appendChild(link);
+  });
+}
+
 // 公開用関数
 // mode 0 = 機能一覧表示
 // mode 1 = フルコン難易度 (デフォルト)
@@ -44,18 +60,22 @@ export default async (lv, mode=1) => {
     await loadCSS(GITHUB_URL + "/css/bootstrap.min.css");
     await loadCSS(GITHUB_URL + "/css/dataTables.bootstrap4.min.css");
     await loadCSS(GITHUB_URL + "/css/style.css");
+    // メダルカウント表示用フォント
+    await loadCSS("https://fonts.googleapis.com/css2?family=Varela+Round&display=swap");
   } catch (error) {
     console.error("Error loading script:", error.message);
     document.body.innerHTML = "初期化処理でエラーが発生しました " + error.message;
     return
   }
-
-  // メダルカウント表示用フォント
-  await loadCSS("https://fonts.googleapis.com/css2?family=Varela+Round&display=swap");
   
-  if (mode == 0){
-    allpage();
-  }else{
-    main(lv, mode);
+  try {
+    if (mode == 0) {
+      allpage();
+    } else {
+      main(lv, mode);
+    }
+  } catch (error) {
+    document.body.innerHTML = "実行中にエラーが発生しました " + error.message;
+    return
   }
 };

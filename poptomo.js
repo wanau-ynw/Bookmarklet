@@ -31,6 +31,22 @@ async function loadScript(src) {
   });
 }
 
+/**
+ * CSSファイルの取り込みを行う
+ * webtool.jsに置いてもいいが、iOSの遅延ロード対策に抽出しておく(効果は無いかも)
+ */
+async function loadCSS(href) {
+  return new Promise((resolve, reject) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.crossOrigin = "anonymous"; // iPhone対応
+    link.onload = () => resolve(href);
+    link.onerror = () => reject(new Error(`Failed to load CSS: ${href}`));
+    document.head.appendChild(link);
+  });
+}
+
 // URLを読み込み、そのページ内の全データを返す
 async function whatever(url) {
     // データを格納するための配列を作成
@@ -572,20 +588,25 @@ export default async () => {
         return
     }
 
-    // プレイヤー名とポプともの一覧を取得する
-    cleanupHTML();
-    showMessage("プレイヤー名の読み込み中・・・");
-    let name = await getUserName();
-    if (!name) {
-        showMessage("プレイヤー名の読み込み時にエラーが発生しました", false, true);
-        return
-    }
-    showMessage("ポプとも一覧の読み込み中・・・");
-    let tomo = await getPoptomoList();
-    if (!tomo) {
-        showMessage("ポプとも一覧の読み込み時にエラーが発生しました", false, true);
-        return
-    }
+    try {
+        // プレイヤー名とポプともの一覧を取得する
+        cleanupHTML();
+        showMessage("プレイヤー名の読み込み中・・・");
+        let name = await getUserName();
+        if (!name) {
+            showMessage("プレイヤー名の読み込み時にエラーが発生しました", false, true);
+            return
+        }
+        showMessage("ポプとも一覧の読み込み中・・・");
+        let tomo = await getPoptomoList();
+        if (!tomo) {
+            showMessage("ポプとも一覧の読み込み時にエラーが発生しました", false, true);
+            return
+        }
 
-    main(name, tomo);
+        main(name, tomo);
+    } catch (error) {
+        document.body.innerHTML = "実行中にエラーが発生しました " + error.message;
+        return
+    }
 };
