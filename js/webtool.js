@@ -123,6 +123,7 @@ function addScript(scriptId, scriptContent) {
  * 画像ファイルを読み込んで返す
  */
 async function loadImage(src) {
+  console.log("load image : " + src);
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
