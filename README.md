@@ -13,6 +13,14 @@
 ### 概要
 ポップンのフルコン難易度表やクリア難易度表に、自動でマークを付けるツールです。  
 
+表示サンプル  
+![sample clear](img/sample_clear.jpg)
+
+個人の統計情報を表示する機能もあります  
+
+表示サンプル  
+![sample graph](img/sample_graph.png)
+
 ### 使い方
 基本的には、ポックラ一覧を出すツールと同じです。
 
@@ -69,6 +77,9 @@ javascript: import("https://wanau-ynw.github.io/Bookmarklet/fullcomboList.js").t
 ## ポプとも比較ツール
 ポプともとスコア比較をするツールです。  
 Lvごとの一覧表を表示したり、スコアやメダルで一覧表を並び変えることができます。
+
+表示サンプル  
+![sample tomo](img/sample_tomo.jpg)
 
 ### 使い方
 
