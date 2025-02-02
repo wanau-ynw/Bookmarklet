@@ -1,4 +1,5 @@
-const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
+// const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
+const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
 
 // 外部jacvascriptファイルを読み込む
 // NOTE: ブックマークレットで動かしているせいか、export-importを用いた
