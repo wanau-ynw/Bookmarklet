@@ -190,7 +190,7 @@ async function main(lv, mode) {
   }
   else if (mode == M_FULLCOMBO) {
     const targetname = "f" + lv;
-    c1 = await createFullListImg(data, icon, scoreicon, targetname, ".jpg", 277, 94, 276, 87, 73)
+    c1 = await createFullListImg(data, icon, scoreicon, targetname, ".jpg", 250, 77, 246, 70, 57)
   } else {
     showMessage("動作エラーです。ブックマークに登録するURLが間違っていないか確認してください", false, true);
     return;
