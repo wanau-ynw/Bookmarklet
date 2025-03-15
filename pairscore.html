@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ペアスコアタ祭り部門組み合わせ検索</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        input {
+            width: 80%;
+            padding: 10px;
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            display: inline-block;
+            text-align: left;
+        }
+    </style>
+    <script>
+        function saveInputValues() {
+            localStorage.setItem("p1First", document.getElementById("p1First").value);
+            localStorage.setItem("p1Second", document.getElementById("p1Second").value);
+            localStorage.setItem("p2First", document.getElementById("p2First").value);
+            localStorage.setItem("p2Second", document.getElementById("p2Second").value);
+        }
+
+        function loadInputValues() {
+            document.getElementById("p1First").value = localStorage.getItem("p1First") || "0";
+            document.getElementById("p1Second").value = localStorage.getItem("p1Second") || "0";
+            document.getElementById("p2First").value = localStorage.getItem("p2First") || "0";
+            document.getElementById("p2Second").value = localStorage.getItem("p2Second") || "0";
+        }
+
+        function findBestCombination() {
+            saveInputValues();
+            
+            const p1First = document.getElementById("p1First").value.split(',').map(Number);
+            const p1Second = document.getElementById("p1Second").value.split(',').map(Number);
+            const p2First = document.getElementById("p2First").value.split(',').map(Number);
+            const p2Second = document.getElementById("p2Second").value.split(',').map(Number);
+            
+            let minDiff = Infinity;
+            let bestCombination = null;
+
+            for (let first1 of p1First) {
+                for (let second1 of p1Second) {
+                    for (let first2 of p2First) {
+                        for (let second2 of p2Second) {
+                            let sum1 = first1 + second1;
+                            let sum2 = first2 + second2;
+                            let diff = Math.abs(sum1 - sum2);
+                            
+                            if (diff < minDiff) {
+                                minDiff = diff;
+                                bestCombination = [first1, second1, first2, second2];
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (bestCombination) {
+                document.getElementById("result").innerHTML = `
+                    <p>最も差が小さい組み合わせ: (${bestCombination.join(', ')})</p>
+                    <p>組み合わせの差: ${minDiff}</p>
+                    <p>プレイヤー1の合計: ${bestCombination[0] + bestCombination[1]}</p>
+                    <p>プレイヤー2の合計: ${bestCombination[2] + bestCombination[3]}</p>
+                `;
+            } else {
+                document.getElementById("result").innerHTML = "入力値が正しくありません。";
+            }
+        }
+
+        window.onload = loadInputValues;
+    </script>
+</head>
+<body>
+    <h2>ペアスコアタ祭り部門組み合わせ検索</h2>
+    <p style="color: red; font-weight: bold;">注意: 本ツールの結果計算結果が誤っていても責任が取れないので、スコア提出前に各自で再計算してください</p>
+    <p>スコア入力例: 91753,92858,93018</p>
+    <label>プレイヤー1 １曲目スコア: <input type="text" id="p1First" oninput="saveInputValues()"></label><br>
+    <label>プレイヤー1 ２曲目スコア: <input type="text" id="p1Second" oninput="saveInputValues()"></label><br>
+    <label>プレイヤー2 １曲目スコア: <input type="text" id="p2First" oninput="saveInputValues()"></label><br>
+    <label>プレイヤー2 ２曲目スコア: <input type="text" id="p2Second" oninput="saveInputValues()"></label><br>
+    <button onclick="findBestCombination()">計算</button>
+    <br>
+    <div id="result"></div>
+    <br>
+    <div>製作者: @PopnYnw</div>
+</body>
+</html>
+
