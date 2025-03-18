@@ -59,8 +59,8 @@
                 for (let second1 of p1Second) {
                     for (let first2 of p2First) {
                         for (let second2 of p2Second) {
-                            let sum1 = first1 + second1;
-                            let sum2 = first2 + second2;
+                            let sum1 = first1 + first2;
+                            let sum2 = second1 + second2;
                             let diff = Math.abs(sum1 - sum2);
                             
                             if (diff < minDiff) {
@@ -76,8 +76,8 @@
                 document.getElementById("result").innerHTML = `
                     <p>最も差が小さい組み合わせ: (${bestCombination.join(', ')})</p>
                     <p>組み合わせの差: ${minDiff}</p>
-                    <p>プレイヤー1の合計: ${bestCombination[0] + bestCombination[1]}</p>
-                    <p>プレイヤー2の合計: ${bestCombination[2] + bestCombination[3]}</p>
+                    <p>１曲目の合計: ${bestCombination[0] + bestCombination[2]}</p>
+                    <p>２曲目の合計: ${bestCombination[1] + bestCombination[3]}</p>
                 `;
             } else {
                 document.getElementById("result").innerHTML = "入力値が正しくありません。";
