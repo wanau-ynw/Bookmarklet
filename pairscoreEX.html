@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ペアスコアタEX部門組み合わせ検索</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .container { max-width: 800px; margin: auto; }
+        table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 5px; text-align: center; }
+        button { margin-top: 10px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>ペアスコアタEX部門組み合わせ検索</h2>
+        <p style="color: red; font-weight: bold;">注意: 本ツールの計算結果が誤っていても責任が取れないので、スコア提出前に各自で再計算してください</p>
+        スコア入力例: 91753,92858,93018
+        <table>
+            <tr>
+                <th>曲名</th>
+                <th>プレイヤー1</th>
+                <th>プレイヤー2</th>
+            </tr>
+            <tr>
+                <td>マッシュルームナイト</td>
+                <td><input type="text" id="p1_a"></td>
+                <td><input type="text" id="p2_a"></td>
+            </tr>
+            <tr>
+                <td>INHERITANCE of WILL</td>
+                <td><input type="text" id="p1_b"></td>
+                <td><input type="text" id="p2_b"></td>
+            </tr>
+            <tr>
+                <td>Pacify</td>
+                <td><input type="text" id="p1_c"></td>
+                <td><input type="text" id="p2_c"></td>
+            </tr>
+            <tr>
+                <td>BLAZE∞BREEZE</td>
+                <td><input type="text" id="p1_d"></td>
+                <td><input type="text" id="p2_d"></td>
+            </tr>
+        </table>
+        <button onclick="calculateBestCombination()">最適な組み合わせを計算</button>
+        <h3>最適な担当</h3>
+        <table id="resultTable">
+            <tr>
+                <th>曲名</th>
+                <th>担当プレイヤー</th>
+                <th>スコア</th>
+            </tr>
+        </table>
+        <h3 id="totalScore"></h3>
+    </div>
+    <script>
+        function parseInput(input) {
+            return Math.max(...input.split(',').map(num => parseInt(num.trim()) || 0));
+        }
+
+        function saveInputs() {
+            let inputs = document.querySelectorAll('input');
+            inputs.forEach(input => localStorage.setItem(input.id, input.value));
+        }
+
+        function loadInputs() {
+            let inputs = document.querySelectorAll('input');
+            inputs.forEach(input => input.value = localStorage.getItem(input.id) || '');
+        }
+
+        function calculateBestCombination() {
+            saveInputs();
+            
+            let scores = {
+                A: [parseInput(document.getElementById('p1_a').value), parseInput(document.getElementById('p2_a').value)],
+                B: [parseInput(document.getElementById('p1_b').value), parseInput(document.getElementById('p2_b').value)],
+                C: [parseInput(document.getElementById('p1_c').value), parseInput(document.getElementById('p2_c').value)],
+                D: [parseInput(document.getElementById('p1_d').value), parseInput(document.getElementById('p2_d').value)]
+            };
+            
+            let combinations = [
+                [['A', 'B'], ['C', 'D']],
+                [['A', 'C'], ['B', 'D']],
+                [['A', 'D'], ['B', 'C']],
+                [['B', 'C'], ['A', 'D']],
+                [['B', 'D'], ['A', 'C']],
+                [['C', 'D'], ['A', 'B']]
+            ];
+            
+            let bestCombination = {};
+            let maxScore = 0;
+            
+            for (let combo of combinations) {
+                let [p1_events, p2_events] = combo;
+                let p1_score = scores[p1_events[0]][0] + scores[p1_events[1]][0];
+                let p2_score = scores[p2_events[0]][1] + scores[p2_events[1]][1];
+                let total = p1_score + p2_score;
+                
+                if (total > maxScore) {
+                    maxScore = total;
+                    bestCombination = {
+                        A: [p1_events.includes('A') ? 'プレイヤー1' : 'プレイヤー2', scores.A[p1_events.includes('A') ? 0 : 1]],
+                        B: [p1_events.includes('B') ? 'プレイヤー1' : 'プレイヤー2', scores.B[p1_events.includes('B') ? 0 : 1]],
+                        C: [p1_events.includes('C') ? 'プレイヤー1' : 'プレイヤー2', scores.C[p1_events.includes('C') ? 0 : 1]],
+                        D: [p1_events.includes('D') ? 'プレイヤー1' : 'プレイヤー2', scores.D[p1_events.includes('D') ? 0 : 1]]
+                    };
+                }
+            }
+            
+            let resultTable = document.getElementById('resultTable');
+            resultTable.innerHTML = '<tr><th>曲名</th><th>担当プレイヤー</th><th>スコア</th></tr>';
+            
+            let eventNames = ['マッシュルームナイト', 'INHERITANCE of WILL', 'Pacify', 'BLAZE∞BREEZE'];
+            let keys = ['A', 'B', 'C', 'D'];
+            
+            for (let i = 0; i < 4; i++) {
+                let row = resultTable.insertRow();
+                row.insertCell(0).innerText = eventNames[i];
+                row.insertCell(1).innerText = bestCombination[keys[i]][0];
+                row.insertCell(2).innerText = bestCombination[keys[i]][1];
+            }
+            
+            document.getElementById('totalScore').innerText = `合計スコア: ${maxScore}`;
+        }
+
+        window.onload = loadInputs;
+    </script>
+</body>
+</html>
+
