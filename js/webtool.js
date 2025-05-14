@@ -38,7 +38,9 @@ function sleep(ms) {
 // - Lv46 スクリーンHyに後置空白が入っている。前後空白はトリムする
 // - 曲ごとに全角空白と半角空白・全角！と半角!の使い分けがバラバラ。半角に統一する
 function songtrim(s) {
-  return s.trim().replaceAll("～","").replaceAll("〜","").replaceAll("＼","").replaceAll("  "," ").replaceAll("　"," ").replaceAll("！","!");
+  return s.trim().replaceAll("～","").replaceAll("〜","").replaceAll("＼","")
+  .replaceAll("（","(").replaceAll("）",")")
+  .replaceAll("  "," ").replaceAll("　"," ").replaceAll("！","!");
 }
 
 /**
