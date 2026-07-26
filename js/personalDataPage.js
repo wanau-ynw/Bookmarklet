@@ -4,7 +4,10 @@ const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/popn29/playdata/mu_lv.h
 const PD_STORAGE_KEY = {
     PERSONAL_DATA: "personal_data",
     GRAPH_MODE_PERCENT: "graph_mode_percent",
+    DIFF_HISTORY: "personal_diff_history",
 }
+// 差分履歴として保存しておく曲データの上限件数(古いものから間引く)
+const DIFF_HISTORY_MAX_RECORDS = 500;
 
 // URLを読み込み、そのページ内の全データを返す
 async function whatever(url) {
@@ -114,6 +117,70 @@ function calcPersonalData(data) {
     lvMedalCount,
     lvRankCount,
   };
+}
+
+// 旧データ・新データ(wapper_personalの返り値と同じ形式)を比較し、
+// スコア・メダル・ランクのいずれかが変化した曲の一覧を返す。
+// 旧データに存在しない曲(新曲追加等)は比較対象外として無視する
+function computePersonalDataDiff(oldData, newData) {
+  if (!oldData) return [];
+  const oldMap = new Map();
+  oldData.forEach(lvdata => {
+    lvdata.data.forEach(d => {
+      oldMap.set(`${lvdata.lv}_${d.song}`, d);
+    });
+  });
+
+  const diffs = [];
+  newData.forEach(lvdata => {
+    lvdata.data.forEach(d => {
+      const old = oldMap.get(`${lvdata.lv}_${d.song}`);
+      if (!old) return;
+      if (d.score === old.score && d.medal === old.medal && d.rank === old.rank) return;
+      diffs.push({
+        lv: lvdata.lv,
+        genre: d.genre,
+        song: d.song,
+        oldScore: old.score,
+        newScore: d.score,
+        oldMedal: old.medal,
+        newMedal: d.medal,
+        oldRank: old.rank,
+        newRank: d.rank,
+      });
+    });
+  });
+  return diffs;
+}
+
+// 差分履歴(更新日ごとの差分一覧)を読み込む
+function loadDiffHistory() {
+  let raw = localStorage.getItem(PD_STORAGE_KEY.DIFF_HISTORY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("差分履歴の読み込みに失敗しました", e);
+    return [];
+  }
+}
+
+function saveDiffHistory(sessions) {
+  localStorage.setItem(PD_STORAGE_KEY.DIFF_HISTORY, JSON.stringify(sessions));
+}
+
+// 今回の差分を履歴に追加する。合計件数がDIFF_HISTORY_MAX_RECORDSを超えたら古い更新日から間引く
+// (最新の更新分は、それ単体で上限を超えていても残す)
+function recordDiffHistory(diffs) {
+  if (!diffs || diffs.length === 0) return;
+  let sessions = loadDiffHistory();
+  sessions.push({ timestamp: new Date().getTime(), diffs });
+
+  let total = sessions.reduce((sum, s) => sum + s.diffs.length, 0);
+  while (total > DIFF_HISTORY_MAX_RECORDS && sessions.length > 1) {
+    total -= sessions.shift().diffs.length;
+  }
+  saveDiffHistory(sessions);
 }
 
 // 曲一覧描画用のプレースホルダをHTMLに追加する
@@ -491,6 +558,127 @@ function createScoreTable(scores, plays){
   document.body.appendChild(document.createElement('br'));
 }
 
+// 「前回からの変化」エリアのベースをHTMLに追加する(サマリ・履歴選択・詳細テーブル)
+function appendDiffBase() {
+  let t = document.createElement('h2');
+  t.textContent = "前回からの変化";
+  document.body.appendChild(t);
+
+  let summary = document.createElement('p');
+  summary.id = 'diff-summary';
+  document.body.appendChild(summary);
+
+  // 履歴選択(更新日ごとに過去の差分をたどれる)
+  let historyLabel = document.createElement('label');
+  historyLabel.textContent = "表示する更新日: ";
+  document.body.appendChild(historyLabel);
+  let historySelect = document.createElement('select');
+  historySelect.id = 'diff-history-select';
+  historySelect.addEventListener('change', () => {
+    let sessions = loadDiffHistory();
+    let idx = parseInt(historySelect.value);
+    if (isNaN(idx) || !sessions[idx]) return;
+    renderDiffTable(sessions[idx].diffs);
+  });
+  document.body.appendChild(historySelect);
+  document.body.appendChild(document.createElement('br'));
+
+  // 詳細テーブルの表示切り替え
+  let toggleBtn = document.createElement('button');
+  toggleBtn.className = "btn btn-info mr-4";
+  toggleBtn.setAttribute("data-toggle", "collapse");
+  toggleBtn.setAttribute("data-target", "#diff-detail");
+  toggleBtn.textContent = "詳細を見る/隠す";
+  document.body.appendChild(toggleBtn);
+  document.body.appendChild(document.createElement('br'));
+
+  let detailDiv = document.createElement('div');
+  detailDiv.id = 'diff-detail';
+  detailDiv.className = 'collapse';
+
+  let table = document.createElement('table');
+  table.id = 'diff-table';
+  table.className = 'table table-striped table-bordered table-sm';
+  let thead = document.createElement('thead');
+  let headerRow = document.createElement('tr');
+  ['Lv', 'ジャンル名', '曲名', 'スコア変化', 'メダル変化'].forEach(headerText => {
+    let th = document.createElement('th');
+    th.textContent = headerText;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+  detailDiv.appendChild(table);
+  document.body.appendChild(detailDiv);
+  document.body.appendChild(document.createElement('br'));
+}
+
+// 履歴選択プルダウンを、保存されている履歴(新しい順)で再構築する
+function refreshDiffHistorySelect() {
+  let sessions = loadDiffHistory();
+  let select = document.getElementById('diff-history-select');
+  select.innerHTML = '';
+  // 表示は新しい順、valueには元の配列インデックスを持たせる
+  sessions.slice().reverse().forEach((session, i) => {
+    let originalIndex = sessions.length - 1 - i;
+    let option = document.createElement('option');
+    option.value = originalIndex;
+    option.textContent = new Date(session.timestamp).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
+    select.appendChild(option);
+  });
+}
+
+// 指定した差分一覧を、サマリ・詳細テーブルに反映する
+function renderDiffTable(diffs) {
+  let scoreUpCount = diffs.filter(d => d.newScore > d.oldScore).length;
+  let medalUpCount = diffs.filter(d => d.newMedal > d.oldMedal).length;
+  let rankUpCount = diffs.filter(d => d.newRank > d.oldRank).length;
+
+  let summary = document.getElementById('diff-summary');
+  summary.textContent = diffs.length === 0
+    ? "変化はありませんでした"
+    : `変化があった曲: ${diffs.length}曲(スコア更新 ${scoreUpCount}曲 / メダルアップ ${medalUpCount}曲 / ランクアップ ${rankUpCount}曲)`;
+
+  let scriptInnerHTML = `
+  var data = [`;
+  diffs.forEach(d => {
+    let scoreDiff = d.newScore - d.oldScore;
+    let scoreDiffStr = (scoreDiff > 0 ? "+" : "") + scoreDiff;
+    scriptInnerHTML += `
+        {
+            "lv": ${d.lv},
+            "genre": '${d.genre.replace(/'/g, "\\'").replace(/"/g, '\\"')}',
+            "title": '${d.song.replace(/'/g, "\\'").replace(/"/g, '\\"')}',
+            "score": '${d.oldScore} → ${d.newScore} (${scoreDiffStr})',
+            "medal": '${medalIDsToImg(d.oldRank, d.oldMedal, GITHUB_URL)} → ${medalIDsToImg(d.newRank, d.newMedal, GITHUB_URL)}'
+        },`;
+  });
+  scriptInnerHTML += `
+      ]
+  $(document).ready(function() {
+      if ($.fn.DataTable.isDataTable('#diff-table')) {
+          $('#diff-table').DataTable().destroy();
+      }
+      $('#diff-table').DataTable({
+          displayLength: 25,
+          data: data,
+          responsive: true,
+          columns: [
+              { data: "lv" },
+              { data: "genre" },
+              { data: "title" },
+              { data: "score" },
+              { data: "medal" }
+          ],
+          "columnDefs": [
+              { className: "text-right", targets: [0] }
+          ]
+      });
+  });
+  `;
+  addScript("dynamic-diff", scriptInnerHTML);
+}
+
 // 個人情報表ページの最上部ボタン群
 function addPersonalDatapageTopButton(calcdata, mainpagecallback) {
   // 一覧に戻るボタン
@@ -544,8 +732,10 @@ function addPersonalDatapageBottomButton(calcdata, mainpagecallback) {
   dataUpdateBtn.className = "btn btn-danger ml-5 mr-4";
   dataUpdateBtn.innerText = "データ更新(時間がかかります)";
   dataUpdateBtn.addEventListener('click', async () => {
+    // 差分算出のため、消去前の現在のデータを確保しておく
+    let oldData = await getLocalStorage(PD_STORAGE_KEY.PERSONAL_DATA, () => wapper_personal());
     localStorage.removeItem(PD_STORAGE_KEY.PERSONAL_DATA);
-    await personal_datapage(mainpagecallback);
+    await personal_datapage(mainpagecallback, oldData);
   });
   document.body.appendChild(dataUpdateBtn);
   document.body.appendChild(document.createElement('br'));
@@ -557,21 +747,38 @@ function addPersonalDatapageBottomButton(calcdata, mainpagecallback) {
 }
 
 // 個人情報表ページ
-async function personal_datapage(mainpagecallback) {
+// oldDataForDiff: データ更新ボタンから呼ばれた場合のみ、更新前のデータが渡される(前回からの変化を表示するため)
+async function personal_datapage(mainpagecallback, oldDataForDiff = null) {
   showMessage("プレイデータの読み込み中・・・", true);
   let data = await getLocalStorage(PD_STORAGE_KEY.PERSONAL_DATA, () => wapper_personal());
   if (!data || data.length == 0 || !data[0]) {
     showMessage(
-      "プレイデータの読み取りに失敗しました。<br>" + 
+      "プレイデータの読み取りに失敗しました。<br>" +
       "公式サイトにアクセスして、データが参照できるか確認してください。", false, true);
     return;
   }
+
+  // 更新時のみ、前回データとの差分を履歴に記録する
+  if (oldDataForDiff) {
+    let diffs = computePersonalDataDiff(oldDataForDiff, data);
+    recordDiffHistory(diffs);
+  }
+
   let calcdata = calcPersonalData(data);
 
   cleanupHTML();
 
   // ヘッダー設定ボタンなど
   addPersonalDatapageTopButton(calcdata, mainpagecallback);
+
+  // 前回からの変化(履歴が無ければ表示しない)
+  let diffHistory = loadDiffHistory();
+  if (diffHistory.length > 0) {
+    appendDiffBase();
+    refreshDiffHistorySelect();
+    renderDiffTable(diffHistory[diffHistory.length - 1].diffs); // 直近の更新分を表示
+  }
+
   // 各種グラフ
   appendGraphBase("クリアメダル分布と平均スコア", "medal");
   createDataTable("クリアメダル一覧", "medal", `${GITHUB_URL}/icon/c_`, calcdata.lvMedalCount, 12, calcdata.lvSongCount);
