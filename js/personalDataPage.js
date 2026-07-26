@@ -1,6 +1,5 @@
 const PLAY_DATA_URL = "https://p.eagate.573.jp/game/popn/popn29/playdata/mu_lv.html?version=-1&bemani=0&category=0&keyword=&sort=&sort_type=up&"
-const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
-// const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
+// GITHUB_URLは fullcomboList.js が window.GITHUB_URL として公開したものを利用する(difficultyPage.jsもこれを参照)
 
 const PD_STORAGE_KEY = {
     PERSONAL_DATA: "personal_data",

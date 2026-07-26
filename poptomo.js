@@ -1,4 +1,7 @@
-const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
+// 配信元URLは、このファイル自身がロードされたURL(import.meta.url)から自動算出する。
+// これにより、リリース用(ynws)・テスト用(各自のgithub-pages)のどちらから読み込んでも
+// ソースの書き換え無しで動作する。
+const GITHUB_URL = new URL('.', import.meta.url).href.replace(/\/$/, "");
 
 const STORAGE_KEY = {
     SELECTED_LV: "selected_lv",

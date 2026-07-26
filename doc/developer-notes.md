@@ -64,10 +64,16 @@ pop'n music アーケード版の公式サイト(e-amusement / p.eagate.573.jp)�
 
 ### 既知の技術的負債
 
-- **`GITHUB_URL` のハードコード**:配信元URL(`https://wanau-ynw.github.io/Bookmarklet`)が
-  `fullcomboList.js`、`poptomo.js`、`js/personalDataPage.js` の複数箇所に直書きされている。
-  フォークして開発する際は各ファイルでこの値を書き換える必要があり、`doc/how-to-develop.md` でも
-  issue #17 として既知の課題に挙げられている。共通設定化されていない点は注意。
+- ~~**`GITHUB_URL` のハードコード**~~:**解消済み**。以前は配信元URLが `fullcomboList.js`、`poptomo.js`、
+  `js/personalDataPage.js` の複数箇所に直書きされており、テスト環境(`wanau-ynw`)とリリース環境(`ynws`)を
+  切り替えるたびに手動書き換えが必要だった(issue #17)。
+  現在は `fullcomboList.js` / `poptomo.js` が **自身のロード元URL(`import.meta.url`)から `GITHUB_URL` を自動算出**する。
+  - `fullcomboList.js` は算出した値を `window.GITHUB_URL` としても公開し、`js/personalDataPage.js`・
+    `js/difficultyPage.js`(モジュールではなく通常の `<script>` として読み込まれるため `import.meta` を使えない)
+    はこのグローバル変数を参照する。
+  - `poptomo.js` は単一ファイル完結のため、モジュールスコープの `GITHUB_URL` のみで完結する。
+  - この結果、テスト時はブックマークレットの `import()` 先URLを自分のgithub-pagesに向けるだけでよく、
+    ソースの書き換えは不要になった。
 - **`js/webtool.js` 内の `loadImage` 関数重複定義**:同名関数が2回定義されており、後者が前者を上書きする形になっている。意図した挙動か要確認。
 - リモートの実運用先は `https://github.com/ynws/Bookmarklet`、`GITHUB_URL` 内の `wanau-ynw` は
   フォーク/開発用アカウントの名残とみられる。
@@ -93,6 +99,8 @@ pop'n music アーケード版の公式サイト(e-amusement / p.eagate.573.jp)�
 ## 7. 開発時の注意点まとめ
 
 - ビルド不要・素のJSなので、変更後は GitHub Pages でホストして実機(ブックマークレット経由)で動作確認する必要がある(`doc/how-to-develop.md` 参照)。
-- 新規ファイル追加時は `GITHUB_URL` ハードコードの影響範囲(3ファイル)を意識する。
+- `GITHUB_URL` は自動算出されるため、新規ファイル追加時に配信元URLを意識する必要はない。ただし
+  `js/personalDataPage.js` や `js/difficultyPage.js` のような非moduleスクリプトを新設する場合、
+  `import.meta.url` は使えないので `window.GITHUB_URL`(`fullcomboList.js`が設定)を参照すること。
 - 公式サイトへのスクレイピング処理を追加する際は `personalDataPage.js` のスリープ配慮のように、サーバー負荷を考慮すること。テスト用に `testdata.txt` が用意されている。
 - Lv範囲(難易度表: クリア46-50/フルコン45-48)を拡張する場合、`img/`・`list/` に対応するファイルを追加し、`js/difficultyPage.js` の対象Lv定義も合わせて更新する必要がある。

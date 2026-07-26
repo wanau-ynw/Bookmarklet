@@ -1,5 +1,10 @@
-const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
-// const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
+// 配信元URLは、このファイル自身がロードされたURL(import.meta.url)から自動算出する。
+// これにより、リリース用(ynws)・テスト用(各自のgithub-pages)のどちらから読み込んでも
+// ソースの書き換え無しで動作する。
+// NOTE: 他ファイル(js/personalDataPage.js等、moduleではなく通常のscriptとして読み込まれるファイル)
+//       からも参照できるよう、windowにも公開しておく
+const GITHUB_URL = new URL('.', import.meta.url).href.replace(/\/$/, "");
+window.GITHUB_URL = GITHUB_URL;
 
 // 外部jacvascriptファイルを読み込む
 // NOTE: ブックマークレットで動かしているせいか、export-importを用いた
