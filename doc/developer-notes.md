@@ -68,7 +68,7 @@ pop'n music アーケード版の公式サイト(e-amusement / p.eagate.573.jp)�
 ### 既知の技術的負債
 
 - ~~**`GITHUB_URL` のハードコード**~~:**解消済み**。以前は配信元URLが `fullcomboList.js`、`poptomo.js`、
-  `js/personalDataPage.js` の複数箇所に直書きされており、テスト環境(`wanau-ynw`)とリリース環境(`ynws`)を
+  `js/personalDataPage.js` の複数箇所に直書きされており、テスト環境(`ynws`)とリリース環境(`wanau-ynw`)を
   切り替えるたびに手動書き換えが必要だった(issue #17)。
   現在は `fullcomboList.js` / `poptomo.js` が **自身のロード元URL(`import.meta.url`)から `GITHUB_URL` を自動算出**する。
   - `fullcomboList.js` は算出した値を `window.GITHUB_URL` としても公開し、`js/personalDataPage.js`・
@@ -77,9 +77,11 @@ pop'n music アーケード版の公式サイト(e-amusement / p.eagate.573.jp)�
   - `poptomo.js` は単一ファイル完結のため、モジュールスコープの `GITHUB_URL` のみで完結する。
   - この結果、テスト時はブックマークレットの `import()` 先URLを自分のgithub-pagesに向けるだけでよく、
     ソースの書き換えは不要になった。
+  - 一部のモバイル環境で`import.meta.url`の取得に失敗するケースが確認されたため、失敗時は
+    リリース用URL(`https://wanau-ynw.github.io/Bookmarklet`)にフォールバックする処理を追加している。
 - **`js/webtool.js` 内の `loadImage` 関数重複定義**:同名関数が2回定義されており、後者が前者を上書きする形になっている。意図した挙動か要確認。
-- リモートの実運用先は `https://github.com/ynws/Bookmarklet`、`GITHUB_URL` 内の `wanau-ynw` は
-  フォーク/開発用アカウントの名残とみられる。
+- git remoteの`origin`は`https://github.com/ynws/Bookmarklet`(ソースリポジトリ)。GitHub Pages配信元は
+  リリース用が`wanau-ynw`、テスト用が`ynws`のアカウントとなっている。
 
 ## 5. 主要ロジックのポイント
 

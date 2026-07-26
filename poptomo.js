@@ -1,7 +1,18 @@
 // 配信元URLは、このファイル自身がロードされたURL(import.meta.url)から自動算出する。
-// これにより、リリース用(ynws)・テスト用(各自のgithub-pages)のどちらから読み込んでも
+// これにより、リリース用(wanau-ynw)・テスト用(各自のgithub-pages)のどちらから読み込んでも
 // ソースの書き換え無しで動作する。
-const GITHUB_URL = new URL('.', import.meta.url).href.replace(/\/$/, "");
+// NOTE: 一部のモバイル環境ではimport.meta.urlの取得に失敗することがある。
+//       ここで例外が発生するとモジュール自体の読み込みが失敗し、ブックマークレット側に
+//       .catch()が無いため無言で処理が止まってしまう。そのため失敗時はリリース用URLに
+//       フォールバックする
+const FALLBACK_GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet";
+let GITHUB_URL;
+try {
+  GITHUB_URL = new URL('.', import.meta.url).href.replace(/\/$/, "");
+} catch (error) {
+  console.error("GITHUB_URLの自動算出に失敗したため、フォールバックURLを使用します", error);
+  GITHUB_URL = FALLBACK_GITHUB_URL;
+}
 
 const STORAGE_KEY = {
     SELECTED_LV: "selected_lv",
