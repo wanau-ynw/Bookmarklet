@@ -136,8 +136,9 @@ function makeImgName(lv, mode, id) {
 async function appendImgDLbtn(img, lv, mode, id) {
   let filename = makeImgName(lv, mode, id);
   const button = document.createElement('button');
-  button.textContent = 'Download' + id;
-  
+  button.className = "btn btn-primary mr-4";
+  button.textContent = 'ダウンロード' + id;
+
   button.addEventListener('click', () => {
     const link = document.createElement('a');
     link.href = img.src;
@@ -169,6 +170,7 @@ async function main(lv, mode) {
 
   // 一覧に戻るボタン
   let b = document.createElement('button');
+  b.className = "btn btn-primary mr-4";
   b.textContent = "一覧に戻る";
   b.addEventListener('click', async () => { await allpage() });
 

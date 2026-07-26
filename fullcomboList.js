@@ -44,6 +44,8 @@ async function loadCSS(href) {
 export default async (lv, mode=1) => {
   // 初回アクセス時のみ、ヘッダに必要情報を取り込む
   document.head.innerHTML = "";
+  // 公式サイトが元々設定していたviewportが消えるため、スマホでの表示崩れを防ぐために再設定する
+  document.head.innerHTML += `<meta name="viewport" content="width=device-width, initial-scale=1.0">`;
   document.body.innerHTML = "初期化中・・・";
   // セッションストレージを初期化
   sessionStorage.clear();
