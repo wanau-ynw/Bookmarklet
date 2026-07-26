@@ -50,7 +50,14 @@ export default async (lv, mode=1) => {
   // セッションストレージを初期化
   sessionStorage.clear();
   // アクセス解析追加
-  document.head.innerHTML += `<script async src="https://www.googletagmanager.com/gtag/js?id=G-L4LJ7D9TB1"></script><script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'G-L4LJ7D9TB1'); </script>`
+  // NOTE: innerHTMLで挿入した<script>は実行されないため、loadScriptと同様にcreateElementで挿入する
+  const gtagScript = document.createElement('script');
+  gtagScript.async = true;
+  gtagScript.src = "https://www.googletagmanager.com/gtag/js?id=G-L4LJ7D9TB1";
+  document.head.appendChild(gtagScript);
+  const gtagInit = document.createElement('script');
+  gtagInit.textContent = "window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'G-L4LJ7D9TB1');";
+  document.head.appendChild(gtagInit);
   // js/cssの取り込み
   try {
     await loadScript(GITHUB_URL + "/js/jquery-3.3.1.slim.min.js"); // 注意: 読み込む順番を変えてはいけない
