@@ -1,5 +1,10 @@
-const GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet"
-// const GITHUB_URL = "https://ynws.github.io/Bookmarklet"
+// 配信元URLは、このファイル自身がロードされたURL(import.meta.url)から自動算出する。
+// これにより、リリース用(ynws)・テスト用(各自のgithub-pages)のどちらから読み込んでも
+// ソースの書き換え無しで動作する。
+// NOTE: 他ファイル(js/personalDataPage.js等、moduleではなく通常のscriptとして読み込まれるファイル)
+//       からも参照できるよう、windowにも公開しておく
+const GITHUB_URL = new URL('.', import.meta.url).href.replace(/\/$/, "");
+window.GITHUB_URL = GITHUB_URL;
 
 // 外部jacvascriptファイルを読み込む
 // NOTE: ブックマークレットで動かしているせいか、export-importを用いた
@@ -39,11 +44,20 @@ async function loadCSS(href) {
 export default async (lv, mode=1) => {
   // 初回アクセス時のみ、ヘッダに必要情報を取り込む
   document.head.innerHTML = "";
+  // 公式サイトが元々設定していたviewportが消えるため、スマホでの表示崩れを防ぐために再設定する
+  document.head.innerHTML += `<meta name="viewport" content="width=device-width, initial-scale=1.0">`;
   document.body.innerHTML = "初期化中・・・";
   // セッションストレージを初期化
   sessionStorage.clear();
   // アクセス解析追加
-  document.head.innerHTML += `<script async src="https://www.googletagmanager.com/gtag/js?id=G-L4LJ7D9TB1"></script><script>window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'G-L4LJ7D9TB1'); </script>`
+  // NOTE: innerHTMLで挿入した<script>は実行されないため、loadScriptと同様にcreateElementで挿入する
+  const gtagScript = document.createElement('script');
+  gtagScript.async = true;
+  gtagScript.src = "https://www.googletagmanager.com/gtag/js?id=G-L4LJ7D9TB1";
+  document.head.appendChild(gtagScript);
+  const gtagInit = document.createElement('script');
+  gtagInit.textContent = "window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'G-L4LJ7D9TB1');";
+  document.head.appendChild(gtagInit);
   // js/cssの取り込み
   try {
     await loadScript(GITHUB_URL + "/js/jquery-3.3.1.slim.min.js"); // 注意: 読み込む順番を変えてはいけない

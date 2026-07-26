@@ -54,8 +54,10 @@ githubの[issue](https://github.com/wanau-ynw/Bookmarklet/issues)を確認し、
 ## 開発
 タスクの内容に応じた開発を行います。必要に応じて、github-pagesで動作を確認してください。
 
-なお、本資料執筆時点ではツールが参照する各種リソースの基準ディレクトリがハードコードされています(const GITHUB_URL)。  
-このため、テスト用にリソースを置き換えたい場合は、ソースを一時的に修正しておく必要があります。要改善。[#17](https://github.com/wanau-ynw/Bookmarklet/issues/17)
+なお、ツールが参照する各種リソースの基準ディレクトリ(GITHUB_URL)は、`fullcomboList.js`/`poptomo.js`自身が
+読み込まれたURL(`import.meta.url`)から自動算出されます。そのため、開始準備の手順3で作成した
+自分のアカウント宛てのブックマークレットからアクセスするだけで、テスト用のリソースを自動的に参照します。
+ソースを一時的に書き換える必要はありません。([#17](https://github.com/wanau-ynw/Bookmarklet/issues/17) 対応済み)
 
 コミットメッセージのフォーマットは任意ですが、最後のコミット(issueがクローズできる状態になるコミット)は、`close #xx` というキーワードで開始してください。
 
