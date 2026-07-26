@@ -40,11 +40,14 @@ async function whatever(url) {
 }
 
 // 個人データ参照のため、特定のレベル範囲の曲をすべて取得する。
-// 公式サイト負荷軽減のため、並列処理は行わずにゆっくり取得
+// 公式サイト負荷軽減のため、1件ずつの完全逐次取得ではなく、少数ページずつまとめて並列取得する
+const PERSONAL_FETCH_BATCH_SIZE = 4; // 同時に取得するページ数
+const PERSONAL_FETCH_BATCH_INTERVAL_MS = 500; // バッチごとの待機時間
+
 async function wapper_personal() {
   await showMessage("注意：");
-  await showMessage("公式サイトに負荷をかけないように、データ取得速度に制限をかけています");
-  await showMessage("すべてのデータを取得するのに２分くらいかかるので、ゆっくりお待ちください");
+  await showMessage("公式サイトに負荷をかけないよう、少しずつまとめてデータを取得しています");
+  await showMessage("すべてのデータを取得するのに30秒程度かかるので、少しお待ちください");
   await showMessage("※取得したデータはデバイス上に保管するので、今後のアクセスはここまで時間かかりません");
   const s = [];
   for (let lv = 40; lv <= 50; lv++) {
@@ -55,14 +58,17 @@ async function wapper_personal() {
       return null;
     }
 
-    let pagelist = Array.from({ length: size }, (_, i) => [i, lv]);
+    let pagelist = Array.from({ length: size }, (_, i) => i);
     let results = [];
     await showMessage(`Lv${lv} 0/${size}`);
-    for (let [page, level] of pagelist) {
-      const result = await whatever(`${PLAY_DATA_URL}page=${page}&lv=${level}`);
-      results.push(...result); // 配列の要素を展開してpush
-      await replaceLastMessage(`Lv${lv} ${page+1}/${size}`);
-      await sleep(1000);
+    for (let i = 0; i < pagelist.length; i += PERSONAL_FETCH_BATCH_SIZE) {
+      const batch = pagelist.slice(i, i + PERSONAL_FETCH_BATCH_SIZE);
+      const batchResults = await Promise.all(
+        batch.map((page) => whatever(`${PLAY_DATA_URL}page=${page}&lv=${lv}`))
+      );
+      batchResults.forEach((result) => results.push(...result)); // 配列の要素を展開してpush
+      await replaceLastMessage(`Lv${lv} ${Math.min(i + PERSONAL_FETCH_BATCH_SIZE, size)}/${size}`);
+      await sleep(PERSONAL_FETCH_BATCH_INTERVAL_MS);
     }
     s.push({lv: lv, data: results});
     await deleteLastMessage();
