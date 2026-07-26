@@ -34,7 +34,10 @@ pop'n music アーケード版の公式サイト(e-amusement / p.eagate.573.jp)�
 │   └── jquery/popper/bootstrap/dataTables/Chart.bundle (vendor, 自前ホスト)
 ├── img/                          難易度表ベース画像(c46~c50.jpg, f45~f48.jpg)、ロゴ、サンプル画像
 ├── icon/                         メダル(c_1~c_12.png)・ランク(s_1~s_12.png)アイコン
-└── list/                         難易度表の曲名配置データ(c46~c50.txt, f45~f48.txt、タブ区切り)
+├── list/                         難易度表の曲名配置データ(c46~c50.txt, f45~f48.txt、タブ区切り)
+└── tools/
+    ├── compress-images.ps1       難易度表ベース画像(img/c*.jpg, f*.jpg)の再圧縮スクリプト
+    └── compress-images.bat       上記をbatから実行するためのラッパー
 ```
 
 ## 3. 各ツールの役割
@@ -65,7 +68,7 @@ pop'n music アーケード版の公式サイト(e-amusement / p.eagate.573.jp)�
 ### 既知の技術的負債
 
 - ~~**`GITHUB_URL` のハードコード**~~:**解消済み**。以前は配信元URLが `fullcomboList.js`、`poptomo.js`、
-  `js/personalDataPage.js` の複数箇所に直書きされており、テスト環境(`wanau-ynw`)とリリース環境(`ynws`)を
+  `js/personalDataPage.js` の複数箇所に直書きされており、テスト環境(`ynws`)とリリース環境(`wanau-ynw`)を
   切り替えるたびに手動書き換えが必要だった(issue #17)。
   現在は `fullcomboList.js` / `poptomo.js` が **自身のロード元URL(`import.meta.url`)から `GITHUB_URL` を自動算出**する。
   - `fullcomboList.js` は算出した値を `window.GITHUB_URL` としても公開し、`js/personalDataPage.js`・
@@ -74,9 +77,11 @@ pop'n music アーケード版の公式サイト(e-amusement / p.eagate.573.jp)�
   - `poptomo.js` は単一ファイル完結のため、モジュールスコープの `GITHUB_URL` のみで完結する。
   - この結果、テスト時はブックマークレットの `import()` 先URLを自分のgithub-pagesに向けるだけでよく、
     ソースの書き換えは不要になった。
+  - 一部のモバイル環境で`import.meta.url`の取得に失敗するケースが確認されたため、失敗時は
+    リリース用URL(`https://wanau-ynw.github.io/Bookmarklet`)にフォールバックする処理を追加している。
 - **`js/webtool.js` 内の `loadImage` 関数重複定義**:同名関数が2回定義されており、後者が前者を上書きする形になっている。意図した挙動か要確認。
-- リモートの実運用先は `https://github.com/ynws/Bookmarklet`、`GITHUB_URL` 内の `wanau-ynw` は
-  フォーク/開発用アカウントの名残とみられる。
+- git remoteの`origin`は`https://github.com/ynws/Bookmarklet`(ソースリポジトリ)。GitHub Pages配信元は
+  リリース用が`wanau-ynw`、テスト用が`ynws`のアカウントとなっている。
 
 ## 5. 主要ロジックのポイント
 
@@ -88,6 +93,31 @@ pop'n music アーケード版の公式サイト(e-amusement / p.eagate.573.jp)�
   公式サイトへの負荷配慮が明示的に実装されている(新しいLv範囲を追加する際もこの配慮を踏襲すること)。
 - **`js/storage.js`**:`STORAGE_VER` 定数によるキャッシュバージョン管理。1ヶ月経過 or バージョン不一致で
   localStorage を再取得する仕組み。難易度表データ更新時は `STORAGE_VER` のインクリメントが必要になる場合がある。
+
+### 難易度表ベース画像のファイルサイズ
+
+`img/c46.jpg`(1840x6179px, 約8.4MB)など、難易度表ベース画像は解像度の割にファイルサイズが大きく、
+生成のたびにこれをダウンロード・デコード・Canvas再エンコードするため、体感速度・通信量・端末メモリ負荷の面で
+ユーザーへの悪影響がある。ピクセルサイズは`js/difficultyPage.js`の描画座標(アイコン貼り付け位置)に
+直結しているため変更できないが、**JPEG圧縮品質のみを下げてファイル容量を圧縮**することは可能。
+
+`tools/compress-images.ps1`(`tools/compress-images.bat`からも実行可)で、ピクセルサイズを変えずに
+再圧縮できる。画像を新しく受け取って`img/`配下を更新した際は、コミット前に実行すること。
+実行結果(各ファイルの圧縮前後サイズ・削減率のサマリ)はbat実行後もコンソールに表示されたままになる(`pause`で待機)。
+
+```
+tools\compress-images.bat
+tools\compress-images.bat -Quality 80   -- 品質を指定する場合(デフォルトは92)
+```
+
+内部的には.NET(`System.Drawing`)のJPEGエンコーダを使用しており、追加のツールインストールは不要。
+圧縮後に元画像とピクセルサイズが変わっていないことをスクリプト内で検証し、変わっていた場合は
+エラーで中断する(描画ロジックへの影響を防ぐため)。
+
+JPEGは非可逆圧縮のため、同じファイルに何度も実行すると再エンコードのたびに画質が劣化していく。
+これを避けるため、圧縮後のファイルハッシュを`tools/.compress-state.json`に記録し、
+前回実行時から内容が変わっていないファイルは自動的にスキップする(このファイルもコミット対象)。
+意図的に再圧縮したい場合のみ`-Force`オプションを付ける。
 
 ## 6. 直近の変更傾向(git log より)
 

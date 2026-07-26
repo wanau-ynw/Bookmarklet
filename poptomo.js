@@ -1,7 +1,18 @@
 // 配信元URLは、このファイル自身がロードされたURL(import.meta.url)から自動算出する。
-// これにより、リリース用(ynws)・テスト用(各自のgithub-pages)のどちらから読み込んでも
+// これにより、リリース用(wanau-ynw)・テスト用(各自のgithub-pages)のどちらから読み込んでも
 // ソースの書き換え無しで動作する。
-const GITHUB_URL = new URL('.', import.meta.url).href.replace(/\/$/, "");
+// NOTE: 一部のモバイル環境ではimport.meta.urlの取得に失敗することがある。
+//       ここで例外が発生するとモジュール自体の読み込みが失敗し、ブックマークレット側に
+//       .catch()が無いため無言で処理が止まってしまう。そのため失敗時はリリース用URLに
+//       フォールバックする
+const FALLBACK_GITHUB_URL = "https://wanau-ynw.github.io/Bookmarklet";
+let GITHUB_URL;
+try {
+  GITHUB_URL = new URL('.', import.meta.url).href.replace(/\/$/, "");
+} catch (error) {
+  console.error("GITHUB_URLの自動算出に失敗したため、フォールバックURLを使用します", error);
+  GITHUB_URL = FALLBACK_GITHUB_URL;
+}
 
 const STORAGE_KEY = {
     SELECTED_LV: "selected_lv",
@@ -564,63 +575,72 @@ async function main(name, tomo) {
 
 // 公開用関数
 export default async () => {
-    // 初回アクセス時のみ、ヘッダに必要情報を取り込む
-    document.head.innerHTML = "";
-    // 公式サイトが元々設定していたviewportが消えるため、スマホでの表示崩れを防ぐために再設定する
-    document.head.innerHTML += `<meta name="viewport" content="width=device-width, initial-scale=1.0">`;
-    document.body.innerHTML = "初期化中・・・";
-    // セッションストレージを初期化
-    sessionStorage.clear();
-    // アクセス解析追加
-    // NOTE: innerHTMLで挿入した<script>は実行されないため、loadScriptと同様にcreateElementで挿入する
-    const gtagScript = document.createElement('script');
-    gtagScript.async = true;
-    gtagScript.src = "https://www.googletagmanager.com/gtag/js?id=G-L4LJ7D9TB1";
-    document.head.appendChild(gtagScript);
-    const gtagInit = document.createElement('script');
-    gtagInit.textContent = "window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'G-L4LJ7D9TB1');";
-    document.head.appendChild(gtagInit);
-    // js/cssの取り込み
+    // NOTE: 従来はhead初期化・viewport再設定等がtry/catchの外にあり、ここで例外が発生すると
+    //       ブックマークレット側に.catch()が無いため無言で処理が止まっていた。
+    //       原因調査のため、関数全体を外側のtry/catchで囲み、必ず画面にエラーを表示するようにする
     try {
-        await loadScript(GITHUB_URL + "/js/jquery-3.3.1.slim.min.js"); // 注意: 読み込む順番を変えてはいけない
-        await loadScript(GITHUB_URL + "/js/popper.min.js");
-        await loadScript(GITHUB_URL + "/js/bootstrap.min.js");
-        await loadScript(GITHUB_URL + "/js/jquery.dataTables.min.js");
-        await loadScript(GITHUB_URL + "/js/dataTables.bootstrap4.min.js");
-        await loadScript(GITHUB_URL + "/js/Chart.bundle.min.js");
-        await loadScript(GITHUB_URL + "/js/logger.js");
-        await loadScript(GITHUB_URL + "/js/storage.js");
-        await loadScript(GITHUB_URL + "/js/webtool.js");
+        // 初回アクセス時のみ、ヘッダに必要情報を取り込む
+        document.head.innerHTML = "";
+        // 公式サイトが元々設定していたviewportが消えるため、スマホでの表示崩れを防ぐために再設定する
+        document.head.innerHTML += `<meta name="viewport" content="width=device-width, initial-scale=1.0">`;
+        document.body.innerHTML = "初期化中・・・";
+        // セッションストレージを初期化
+        sessionStorage.clear();
+        // アクセス解析追加
+        // NOTE: innerHTMLで挿入した<script>は実行されないため、loadScriptと同様にcreateElementで挿入する
+        const gtagScript = document.createElement('script');
+        gtagScript.async = true;
+        gtagScript.src = "https://www.googletagmanager.com/gtag/js?id=G-L4LJ7D9TB1";
+        document.head.appendChild(gtagScript);
+        const gtagInit = document.createElement('script');
+        gtagInit.textContent = "window.dataLayer = window.dataLayer || [];function gtag(){dataLayer.push(arguments);}gtag('js', new Date());gtag('config', 'G-L4LJ7D9TB1');";
+        document.head.appendChild(gtagInit);
 
-        await loadCSS(GITHUB_URL + "/css/normalize.css");
-        await loadCSS(GITHUB_URL + "/css/bootstrap.min.css");
-        await loadCSS(GITHUB_URL + "/css/dataTables.bootstrap4.min.css");
-        await loadCSS(GITHUB_URL + "/css/style.css");
-    } catch (error) {
-        console.error("Error loading script:", error.message);
-        document.body.innerHTML = "初期化処理でエラーが発生しました " + error.message;
-        return
-    }
+        // js/cssの取り込み
+        try {
+            await loadScript(GITHUB_URL + "/js/jquery-3.3.1.slim.min.js"); // 注意: 読み込む順番を変えてはいけない
+            await loadScript(GITHUB_URL + "/js/popper.min.js");
+            await loadScript(GITHUB_URL + "/js/bootstrap.min.js");
+            await loadScript(GITHUB_URL + "/js/jquery.dataTables.min.js");
+            await loadScript(GITHUB_URL + "/js/dataTables.bootstrap4.min.js");
+            await loadScript(GITHUB_URL + "/js/Chart.bundle.min.js");
+            await loadScript(GITHUB_URL + "/js/logger.js");
+            await loadScript(GITHUB_URL + "/js/storage.js");
+            await loadScript(GITHUB_URL + "/js/webtool.js");
 
-    try {
-        // プレイヤー名とポプともの一覧を取得する
-        cleanupHTML();
-        showMessage("プレイヤー名の読み込み中・・・");
-        let name = await getUserName();
-        if (!name) {
-            showMessage("プレイヤー名の読み込み時にエラーが発生しました", false, true);
-            return
-        }
-        showMessage("ポプとも一覧の読み込み中・・・");
-        let tomo = await getPoptomoList();
-        if (!tomo) {
-            showMessage("ポプとも一覧の読み込み時にエラーが発生しました", false, true);
+            await loadCSS(GITHUB_URL + "/css/normalize.css");
+            await loadCSS(GITHUB_URL + "/css/bootstrap.min.css");
+            await loadCSS(GITHUB_URL + "/css/dataTables.bootstrap4.min.css");
+            await loadCSS(GITHUB_URL + "/css/style.css");
+        } catch (error) {
+            console.error("Error loading script:", error.message);
+            document.body.innerHTML = "初期化処理でエラーが発生しました " + error.message;
             return
         }
 
-        main(name, tomo);
+        try {
+            // プレイヤー名とポプともの一覧を取得する
+            cleanupHTML();
+            showMessage("プレイヤー名の読み込み中・・・");
+            let name = await getUserName();
+            if (!name) {
+                showMessage("プレイヤー名の読み込み時にエラーが発生しました", false, true);
+                return
+            }
+            showMessage("ポプとも一覧の読み込み中・・・");
+            let tomo = await getPoptomoList();
+            if (!tomo) {
+                showMessage("ポプとも一覧の読み込み時にエラーが発生しました", false, true);
+                return
+            }
+
+            main(name, tomo);
+        } catch (error) {
+            document.body.innerHTML = "実行中にエラーが発生しました " + error.message;
+            return
+        }
     } catch (error) {
-        document.body.innerHTML = "実行中にエラーが発生しました " + error.message;
-        return
+        console.error("Error initializing:", error);
+        document.body.innerHTML = "初期化準備中にエラーが発生しました: " + (error && error.message ? error.message : String(error));
     }
 };
